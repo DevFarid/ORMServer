@@ -13,6 +13,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Iterator;
 import java.util.Scanner;
 
 public class HiveClient {
@@ -44,8 +45,14 @@ public class HiveClient {
             messageThread = scannerThread();
             messageThread.start();
             while (running.get()) {
-                selector.select();
-                for (SelectionKey key : selector.selectedKeys()) {
+                int selectedResult = selector.select();
+                if(selectedResult == 0) { continue; }
+                
+                Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
+                while(keyIterator.hasNext()) {
+                    SelectionKey key = keyIterator.next();
+                    keyIterator.remove();
+
                     if (key.isConnectable()) {
                         SocketChannel channel = (SocketChannel) key.channel();
 
@@ -57,7 +64,7 @@ public class HiveClient {
                         channel.register(selector, SelectionKey.OP_READ);
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
-                        sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "Hello from client"));
+                        sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
                     }
 
                     //
@@ -69,9 +76,9 @@ public class HiveClient {
             }
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Error starting client.", e);
+        } finally {
+            stop();
         }
-
-
     }
 
     /**
