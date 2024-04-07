@@ -1,5 +1,8 @@
 package hive;
 
+import hive.packets.Packet;
+import misc.Utils;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -51,20 +54,29 @@ public class Server {
     private Thread scannerThread() {
         return new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
-            while(true) {
-                if(scanner.next().equals("stop")) {
-                    try {
-                        stop();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+            try {
+                while (true) {
+                    if (scanner.next().equals("stop")) {
+                        try {
+                            stop();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        break;
                     }
-                    break;
                 }
+            } finally {
+                scanner.close();
             }
-            scanner.close();
         });
     }
 
+
+    /**
+     * Starts the server.
+     * Starts a scanner thread that will listen for user commands.
+     * This method will handle new connections and read data from clients.
+     */
     public void start() {
         // Start the server if it is not running.
         if(!running.get()) {
@@ -104,7 +116,12 @@ public class Server {
         }
     }
 
-    // Accept a connection.
+    /**
+     * Accept a connection from a client.
+     * @param key the selection key.
+     * @throws IOException if an I/O error occurs.
+     */
+
     public void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel clientChannel = serverChannel.accept();
@@ -113,6 +130,11 @@ public class Server {
         logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
     }
 
+    /**
+     * Read data from a client.
+     * @param key the selection key.
+     * @throws IOException if an I/O error occurs.
+     */
     public void read(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         if(clientChannel == null) { return; }
@@ -125,14 +147,18 @@ public class Server {
             clientChannel.close();
             return;
         }
-
+        
         buffer.flip();
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-        logger.info(String.format("Received message from %s: %s", clientChannel.getRemoteAddress(), new String(bytes)));
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data);
+        Packet packet = Utils.deserializePacket(data);
+        logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
     }
 
-    // Stop the server.
+    /**
+     * Stops the server.
+     * @throws IOException if an I/O error occurs.
+     */
     public void stop() throws IOException {
         if(running.get()) {
             running.set(false);
