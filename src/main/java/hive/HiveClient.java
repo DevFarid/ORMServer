@@ -1,5 +1,9 @@
 package hive;
 
+import hive.packets.Packet;
+import hive.packets.PacketType;
+import misc.Utils;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -30,11 +34,15 @@ public class HiveClient {
         }
     }
 
+    /**
+     * Starts the client and listens for messages from the server.
+     */
     public void start() {
         running.set(true);
-        messageThread = scannerThread();
-        messageThread.start();
+
         try {
+            messageThread = scannerThread();
+            messageThread.start();
             while (running.get()) {
                 selector.select();
                 for (SelectionKey key : selector.selectedKeys()) {
@@ -44,11 +52,12 @@ public class HiveClient {
                         if (channel.isConnectionPending()) {
                             channel.finishConnect();
                         }
-
-                        //Register
+                        
+                        // Register
                         channel.register(selector, SelectionKey.OP_READ);
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
-                        sendMessage("Hello from client");
+
+                        sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "Hello from client"));
                     }
 
                     //
@@ -61,52 +70,58 @@ public class HiveClient {
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Error starting client.", e);
         }
+
+
     }
 
+    /**
+     * Thread to read messages from the console and send them to the server.
+     */
     private Thread scannerThread() {
         return new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
-            while(true) {
+            while (true) {
                 String message = scanner.nextLine();
-                if(message.equals("stop")) {
+                if (message.equals("stop")) {
                     stop();
                     break;
                 }
-
-                sendMessage(message);
+                sendPacket(new Packet(PacketType.MESSAGE, "message-chat", message));
             }
             scanner.close();
         });
     }
 
+    /**
+     * Stops the client.
+     */
     public void stop() {
         running.set(false);
         messageThread.interrupt();
         try {
-            clientChannel.close();
             selector.close();
+            clientChannel.close();
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Error stopping client.", e);
         }
     }
 
-
-    //method to send message to server
-    public void sendMessage(String message) {
+    // method to send message to server
+    public void sendPacket(Packet p) {
         try {
-            clientChannel.write(ByteBuffer.wrap(message.getBytes()));
+            byte[] serializedPacket = Utils.serialize(p);
+            ByteBuffer buffer = ByteBuffer.wrap(serializedPacket);
+
+            while(buffer.hasRemaining()) {
+                clientChannel.write(buffer);
+            }
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error sending message.", e);
+            logger.log(Level.SEVERE, "error sending a packet!", e);
         }
     }
 
-
     public static void main(String[] args) {
-        HiveClient client = new HiveClient("localhost", 8080);
+        HiveClient client = new HiveClient("localhost", 25565);
         client.start();
-
-
     }
-
-
 }
