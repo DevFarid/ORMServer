@@ -26,4 +26,9 @@ public class Packet implements Serializable {
     public String getData() {
         return data;
     }
+
+    @Override
+    public String toString() {
+        return String.format("Packet{packetType=%s, table='%s', data='%s'}", packetType, table, data);
+    }
 }
