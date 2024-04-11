@@ -54,19 +54,19 @@ public class HiveClient {
                     keyIterator.remove();
 
                     if (key.isConnectable()) {
-                        SocketChannel channel = (SocketChannel) key.channel();
+                        try (SocketChannel channel = (SocketChannel) key.channel()) {
 
-                        if (channel.isConnectionPending()) {
-                            channel.finishConnect();
+                            if (channel.isConnectionPending()) {
+                                channel.finishConnect();
+                            }
+
+                            // Register
+                            channel.register(selector, SelectionKey.OP_READ);
+                            logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
+
+                            sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
                         }
-                        
-                        // Register
-                        channel.register(selector, SelectionKey.OP_READ);
-                        logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
-
-                        sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
                     }
-
                     //
                     if (key.isReadable()) {
                         SocketChannel channel = (SocketChannel) key.channel();

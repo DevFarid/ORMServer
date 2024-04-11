@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * The server can be stopped by typing "stop" in the console.
  * Created by SixEyes on 2024-04-07.
  */
-public class Server {
+public class Server implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
@@ -53,8 +53,7 @@ public class Server {
      */
     private Thread scannerThread() {
         return new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            try {
+            try (Scanner scanner = new Scanner(System.in)) {
                 while (true) {
                     if (scanner.next().equals("stop")) {
                         try {
@@ -65,8 +64,6 @@ public class Server {
                         break;
                     }
                 }
-            } finally {
-                scanner.close();
             }
         });
     }
@@ -123,11 +120,12 @@ public class Server {
      */
 
     public void accept(SelectionKey key) throws IOException {
-        ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
-        SocketChannel clientChannel = serverChannel.accept();
-        clientChannel.configureBlocking(false);
-        clientChannel.register(selector, SelectionKey.OP_READ);
-        logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
+        try(ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel()) {
+            SocketChannel clientChannel = serverChannel.accept();
+            clientChannel.configureBlocking(false);
+            clientChannel.register(selector, SelectionKey.OP_READ);
+            logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
+        }
     }
 
     /**
@@ -168,8 +166,18 @@ public class Server {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        Server server = new Server(25565);
-        server.start();
+    public static void main(String[] args) throws Exception {
+        try(Server server = new Server(25565)) {
+            server.start();
+        }
+    }
+
+    public boolean isRunning() {
+        return running.get() && serverChannel.isOpen();
+    }
+
+    @Override
+    public void close() throws Exception {
+        stop();
     }
 }
