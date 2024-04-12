@@ -6,6 +6,7 @@ import misc.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -130,5 +131,25 @@ public class HiveClient {
     public static void main(String[] args) {
         HiveClient client = new HiveClient("localhost", 25565);
         client.start();
+    }
+
+    public boolean isRunning() {
+        return this.clientChannel.isConnectionPending() && this.running.get();
+    }
+
+    public boolean isOnline() {
+        return this.clientChannel.isConnected() && this.running.get();
+    }
+
+    public SocketChannel getChannel() {
+        return this.clientChannel;
+    }
+
+    public SocketAddress address() {
+        try {
+            return this.clientChannel.getLocalAddress();
+        } catch (IOException e) {
+            return null;
+        }
     }
 }

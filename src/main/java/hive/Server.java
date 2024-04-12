@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import java.util.HashSet;
 /**
  * A java NIO server. Handles multiple clients using multiple threads.
  * The server can be stopped by typing "stop" in the console.
@@ -23,8 +23,7 @@ public class Server implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
-
-    // State variable of the server.
+    private final Set<SocketChannel> connectedClients = new HashSet<SocketChannel>();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public Server(int port) throws IOException {
@@ -125,6 +124,8 @@ public class Server implements AutoCloseable {
             clientChannel.configureBlocking(false);
             clientChannel.register(selector, SelectionKey.OP_READ);
             logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
+
+            connectedClients.add(clientChannel);
         }
     }
 
@@ -142,6 +143,7 @@ public class Server implements AutoCloseable {
         if(read == -1) {
             logger.info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
             key.cancel();
+            connectedClients.remove(clientChannel);
             clientChannel.close();
             return;
         }
@@ -174,6 +176,10 @@ public class Server implements AutoCloseable {
 
     public boolean isRunning() {
         return running.get() && serverChannel.isOpen();
+    }
+
+    public Set<SocketChannel> getConnectedClients() {
+        return connectedClients;
     }
 
     @Override
