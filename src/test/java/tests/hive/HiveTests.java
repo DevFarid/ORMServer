@@ -18,6 +18,11 @@ import java.util.concurrent.atomic.AtomicReference;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class HiveTests {
 
+    /**
+     * Setup a server on a given port.
+     * @param port the port to start the server on.
+     * @return a <@code ListenableFuture> listener that will return true when the server is done running in the background.
+     */
     public static Pair<AtomicReference<Server>, ListenableFuture<Boolean>> setupServer(int port) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         AtomicReference<Server> eval = new AtomicReference<>();
@@ -29,17 +34,19 @@ public class HiveTests {
                 throw new RuntimeException(e);
             }
         });
-
         ListeningExecutorService listeningExecutor = MoreExecutors.listeningDecorator(executorService);
         ListenableFuture<Boolean> serverRunningFuture = listeningExecutor.submit(serverStartFuture::isDone);
-
         return Pair.with(eval, serverRunningFuture);
     }
 
+    /**
+     * Setup a client on a given port.
+     * @param port the port to connect the client to.
+     * @return a <@code ListenableFuture> listener that will return true when the client is done connecting in the background.
+     */
     public static Pair<AtomicReference<HiveClient>, ListenableFuture<Boolean>> setupClient(int port) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         AtomicReference<HiveClient> clientRef = new AtomicReference<>();
-    
         Future<?> clientStartFuture = executorService.submit(() -> {
             try {
                 HiveClient client = new HiveClient("localhost", port); 
@@ -49,10 +56,8 @@ public class HiveTests {
                 throw new RuntimeException(e);
             }
         });
-    
         ListeningExecutorService listeningExecutor = MoreExecutors.listeningDecorator(executorService);
         ListenableFuture<Boolean> clientRunningFuture = listeningExecutor.submit(clientStartFuture::isDone);
-    
         return Pair.with(clientRef, clientRunningFuture);
     }
     
@@ -126,7 +131,9 @@ public class HiveTests {
         }, Executors.newSingleThreadExecutor());
     }
 
-
+    /**
+     * Tests if two clients can connect to the server.
+     */
     @Test
     @Order(4)
     void testTwoClientsConnectToServer() {
