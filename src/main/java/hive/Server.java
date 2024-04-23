@@ -54,7 +54,7 @@ public class Server implements AutoCloseable {
         return new Thread(() -> {
             try (Scanner scanner = new Scanner(System.in)) {
                 while (true) {
-                    if (scanner.next().equals("stop")) {
+                    if (scanner.hasNext() && scanner.next().equals("stop")) {
                         try {
                             stop();
                         } catch (IOException e) {
