@@ -43,6 +43,7 @@ public class HiveClient {
             Scanner scanner = new Scanner(System.in);
             while (true) {
                 String message = scanner.nextLine();
+                if(message.isEmpty()) { continue; }
                 if (message.equals("stop")) {
                     try {
                         stop();

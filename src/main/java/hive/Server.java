@@ -60,7 +60,8 @@ public class Server implements AutoCloseable {
                             if(!clients.isEmpty()) {
                                 clients.forEach(client -> {
                                     try {
-                                        sbuilder.append(client.getRemoteAddress()).append("\n");
+                                        if(client.isOpen() && client.isConnected())
+                                            sbuilder.append(client.getRemoteAddress()).append("\n");
                                     } catch (IOException e) {
                                         logger.log(Level.SEVERE, "Error retrieve the connected client list.", e);
                                     }
