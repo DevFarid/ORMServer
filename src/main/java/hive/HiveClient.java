@@ -112,6 +112,14 @@ public class HiveClient {
     }
 
     /**
+     * Gets the current client channel.
+     * @return the {@code SocketChannel} channel of this client.
+     */
+    public SocketChannel getChannel() {
+        return this.clientChannel;
+    }
+
+    /**
      * Stops the client.
      * @throws IOException any errors causing a shutdown failure.
      */

@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,9 +26,10 @@ public class Server implements AutoCloseable {
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private Set<SocketChannel> connectedClients = new HashSet<>();
 
     public Server(int port) throws IOException {
-        logger.info(String.format("Starting server on port %d", port));
+        logger.info(String.format("Opening a socket on port %d", port));
         // Open selector and server channel
         this.selector = Selector.open();
         this.serverChannel = ServerSocketChannel.open();
@@ -43,13 +46,29 @@ public class Server implements AutoCloseable {
         return new Thread(() -> {
             try (Scanner scanner = new Scanner(System.in)) {
                 while (true) {
-                    if (scanner.next().equals("stop")) {
-                        try {
-                            stop();
-                        } catch (IOException e) {
-                            logger.log(Level.SEVERE, "Error stopping server.", e);
+                    if(scanner.hasNextLine()) {
+                        String message = scanner.nextLine().trim();
+                        if(message.equalsIgnoreCase("stop")) {
+                            try {
+                                stop();
+                            } catch (IOException e) {
+                                logger.log(Level.SEVERE, "Error stopping server.", e);
+                            }
+                            break;
+                        } else if(message.equalsIgnoreCase("clist")) {
+                            Set<SocketChannel> clients = getConnectedClients();
+                            StringBuilder sbuilder = new StringBuilder();
+                            if(!clients.isEmpty()) {
+                                clients.forEach(client -> {
+                                    try {
+                                        sbuilder.append(client.getRemoteAddress()).append("\n");
+                                    } catch (IOException e) {
+                                        logger.log(Level.SEVERE, "Error retrieve the connected client list.", e);
+                                    }
+                                });
+                                logger.info(String.format("Connected clients: \n%s", sbuilder.toString()));
+                            }
                         }
-                        break;
                     }
                 }
             }
@@ -65,6 +84,7 @@ public class Server implements AutoCloseable {
     public void start() {
         // Start the server if it is not running.
         if(!running.get()) {
+            logger.info("Now accepting operations from clients.");
             running.set(true);
 
             // register scanner thread
@@ -114,6 +134,7 @@ public class Server implements AutoCloseable {
         SocketChannel clientChannel = serverChannel.accept();
         clientChannel.configureBlocking(false);
         clientChannel.register(selector, SelectionKey.OP_READ);
+        connectedClients.add(clientChannel);
         logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
     }
 
@@ -130,6 +151,7 @@ public class Server implements AutoCloseable {
 
         if(read == -1) {
             logger.info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
+            connectedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
             return;
@@ -159,6 +181,10 @@ public class Server implements AutoCloseable {
      */
     public boolean isOpen() {
         return this.serverChannel.isOpen() && this.selector.isOpen();
+    }
+
+    public Set<SocketChannel> getConnectedClients() {
+        return this.connectedClients;
     }
 
     /**
