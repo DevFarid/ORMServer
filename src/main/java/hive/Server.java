@@ -143,16 +143,33 @@ public class Server implements AutoCloseable {
     }
 
     /**
+     * Checks if the server is running. To consider the server to be running,
+     * a check is done on see if both the server channel and the selector are open,
+     * as well as the selector managing key operations.
+     * @return {@code true} if the server is running, {@code false} otherwise.
+     */
+    public boolean isRunning() {
+        return ( this.serverChannel.isOpen() && this.selector.isOpen() ) && running.get();
+    }
+
+    /**
+     * Checks if the server is open. This means that the server channel and the selector are open.
+     * But doesn't guarantee that the server is running, i.e. managing key operations (accept, read, write).
+     * @return {@code true} if the server is reachable via internet, {@code false} otherwise.
+     */
+    public boolean isOpen() {
+        return this.serverChannel.isOpen() && this.selector.isOpen();
+    }
+
+    /**
      * Stops the server.
      * @throws IOException if an I/O error occurs.
      */
     public void stop() throws IOException {
-        if(running.get()) {
-            running.set(false);
-            this.selector.wakeup();
-            this.selector.close();
-            this.serverChannel.close();
-        }
+        running.set(false);
+        this.selector.wakeup();
+        this.selector.close();
+        this.serverChannel.close();
     }
 
     public static void main(String[] args) throws Exception {
