@@ -6,7 +6,7 @@ import hive.packets.PacketType;
 import java.io.IOException;
 
 public class Utils {
-    public static byte[] serialize(Packet packet) throws IOException {
+    public static byte[] serializePacket(Packet packet) throws IOException {
         return (packet.getPacketType() + "|" + packet.getTable() + "|" + packet.getData()).getBytes();
     }
 

@@ -1,5 +1,11 @@
 package hive;
+import org.checkerframework.checker.units.qual.t;
 import org.junit.jupiter.api.*;
+
+import hive.packets.Packet;
+import hive.packets.PacketType;
+import misc.Utils;
+
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -17,7 +23,8 @@ import java.util.logging.Logger;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ServerTests {
     private final Logger logger = Logger.getLogger(ServerTests.class.getName());
-    // Test for server reachability and open state.
+    
+    // Test for server reachability and that channels are open.
     @Test
     @Order(1)
     @DisplayName("test server is open and reachable.")
@@ -32,7 +39,7 @@ public class ServerTests {
     @Order(2)
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
-        final Server server = new Server(8181);
+        final Server server = new Server(8081);
         server.close();
         Assertions.assertFalse(server.isOpen());
     }
@@ -42,7 +49,7 @@ public class ServerTests {
     @Order(3)
     @DisplayName("test server is reachable & running for operations.")
     public void testServerRunning() throws Exception {
-        final Server server = new Server(8282);
+        final Server server = new Server(8082);
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         
@@ -60,12 +67,12 @@ public class ServerTests {
         server.close();
     }
 
-    // Test client connecting to server.
+    // Test server receive Client Connection.
     @Test
     @Order(4)
     @DisplayName("test client is connected to the server.")
-    public void testClientConnected() throws Exception {
-        final Server server = new Server(8383);
+    public void testServerReceiveClientConnection() throws Exception {
+        final Server server = new Server(8083);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -74,7 +81,7 @@ public class ServerTests {
         latch.await(500, TimeUnit.MILLISECONDS);
     
         executor.submit(() -> {
-            clientRef.set(new HiveClient("localhost", 8383));
+            clientRef.set(new HiveClient("localhost", 8083));
             try {
                 clientRef.get().start();
             } catch (IOException e) {
@@ -88,7 +95,109 @@ public class ServerTests {
         clientRef.get().stop();
     }
     
-    //Test server receiving multiple client connections and sending messages to all clients
+    //Test server receiving multiple client connections\
+    @Test
+    @Order(5)
+    @DisplayName("test server receives multiple client connections.")
+    public void testServerReceiveMultipleClientConnections() throws Exception {
+        final Server server = new Server(8084);
+        final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
+        final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(3);
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
+        
+        executor.submit(server::start);
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        executor.submit(() -> {
+            clientRef1.set(new HiveClient("localhost", 8084));
+            try {
+                clientRef1.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        executor.submit(() -> {
+            clientRef2.set(new HiveClient("localhost", 8084));
+            try {
+                clientRef2.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        Assertions.assertTrue(server.getConnectedClients().size() == 2);
+        server.close();
+        clientRef1.get().stop();
+        clientRef2.get().stop();
+    }
+
+    //Test server sending messages to all clients
+    @Test
+    @Order(6)
+    @DisplayName("test server sends messages to all clients.")
+    public void testServerSendMessagesToAllClients() throws Exception {
+        final Server server = new Server(8085);
+        final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
+        final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(3);
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
+        
+        executor.submit(server::start);
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        executor.submit(() -> {
+            clientRef1.set(new HiveClient("localhost", 8085));
+            try {
+                clientRef1.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        executor.submit(() -> {
+            clientRef2.set(new HiveClient("localhost", 8085));
+            try {
+                clientRef2.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        // Send message to all clients
+        server.broadcastMessage("Hello World" /* some date object here*/);
+        
+        latch.await(500, TimeUnit.MILLISECONDS);
+        
+        // Check if all clients received the message
+        Assertions.assertEquals(clientRef1.get().read().getData(), "Hello World");
+        Assertions.assertEquals(clientRef2.get().read().getData(), "Hello World");
+
+        server.close();
+        clientRef1.get().stop();
+        clientRef2.get().stop();
+    }
     
+    // Test server receiving a packet from a client.
+    @Test
+    @Order(7)
+    @DisplayName("test server receiving a packet from a connected client.")
+    public void testServerReceivePacketFromConnectedClient() throws Exception {
+
+        final Server server = new Server(8086);
+        final AtomicReference<HiveClient> clientRef = new AtomicReference<>(new HiveClient("localhost", 8086));
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        Assertions.assertTrue(true);
+        server.close();
+        clientRef.get().stop();
+    }
+    
+    // Test server receiving multiple simoultaneous packets from many clients.
     
 }

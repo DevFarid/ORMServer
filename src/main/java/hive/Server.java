@@ -1,6 +1,7 @@
 package hive;
 
 import hive.packets.Packet;
+import hive.packets.PacketType;
 import misc.Utils;
 
 import java.io.IOException;
@@ -143,9 +144,9 @@ public class Server implements AutoCloseable {
      * @param key the selection key.
      * @throws IOException if an I/O error occurs.
      */
-    public void read(SelectionKey key) throws IOException {
+    public Packet read(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
-        if(clientChannel == null) { return; }
+        if(clientChannel == null) { return null; }
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         int read = clientChannel.read(buffer);
 
@@ -154,7 +155,7 @@ public class Server implements AutoCloseable {
             connectedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
-            return;
+            return null;
         }
         
         buffer.flip();
@@ -162,6 +163,8 @@ public class Server implements AutoCloseable {
         buffer.get(data);
         Packet packet = Utils.deserializePacket(data);
         logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
+
+        return packet;
     }
 
     /**
@@ -202,6 +205,43 @@ public class Server implements AutoCloseable {
     public void close() throws Exception {
         stop();
     }
+
+
+    /**
+     * Send a packet to a client.
+     * @param client the client to send the packet to.
+     * @param packet the packet to send.
+     * @throws IOException if an I/O error occurs.
+     */
+    public void send(SocketChannel client, Packet packet) throws IOException {
+        if(client == null) return;
+        if(client.isOpen() && client.isConnected())
+            client.write(ByteBuffer.wrap(Utils.serializePacket(packet)));
+    }
+
+    /**
+     * Send a packet to all connected clients.
+     * @param packet the packet to send.
+     */
+    public void sendToAll(Packet packet) {
+        connectedClients.forEach(client -> {
+            try {
+                send(client, packet);
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Error sending packet to client.", e);
+            }
+        });
+    }
+
+
+    /**
+     * Broadcast a message to all connected clients.
+     * @param message the message to broadcast.
+     */
+    public void broadcastMessage(String message) {
+        this.sendToAll(new Packet(PacketType.MESSAGE, "message-chat", message));
+    }
+
 
     public static void main(String[] args) throws Exception {
         try(Server server = new Server(25565)) {
