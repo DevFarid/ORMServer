@@ -43,7 +43,9 @@ public class HiveClient {
             Scanner scanner = new Scanner(System.in);
             while (true) {
                 String message = scanner.nextLine();
-                if(message.isEmpty()) { continue; }
+                if (message.isEmpty()) {
+                    continue;
+                }
                 if (message.equals("stop")) {
                     try {
                         stop();
@@ -52,7 +54,7 @@ public class HiveClient {
                     }
                     break;
                 }
-                sendPacket(new Packet(PacketType.MESSAGE, "message-chat", message));
+                sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", message));
             }
             scanner.close();
         });
@@ -69,10 +71,12 @@ public class HiveClient {
             scannerThread.start();
             while (running.get()) {
                 int selectedResult = this.selector.select();
-                if(selectedResult == 0) { continue; }
-                
+                if (selectedResult == 0) {
+                    continue;
+                }
+
                 Iterator<SelectionKey> keyIterator = this.selector.selectedKeys().iterator();
-                while(keyIterator.hasNext()) {
+                while (keyIterator.hasNext()) {
                     SelectionKey key = keyIterator.next();
                     keyIterator.remove();
 
@@ -82,7 +86,7 @@ public class HiveClient {
                         if (channel.isConnectionPending()) {
                             channel.finishConnect();
                         }
-                        
+
                         // Register
                         channel.register(this.selector, SelectionKey.OP_READ);
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
@@ -101,10 +105,10 @@ public class HiveClient {
     // method to send message to server
     public void sendPacket(Packet p) {
         try {
-            byte[] serializedPacket = Utils.serialize(p);
+            byte[] serializedPacket = Utils.serializePacket(p);
             ByteBuffer buffer = ByteBuffer.wrap(serializedPacket);
 
-            while(buffer.hasRemaining()) {
+            while (buffer.hasRemaining()) {
                 clientChannel.write(buffer);
             }
         } catch (IOException e) {
@@ -112,8 +116,27 @@ public class HiveClient {
         }
     }
 
+    private Packet read() throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        int read = this.clientChannel.read(buffer);
+        if (read == -1) {
+            logger.info("Server has closed the connection.");
+            this.clientChannel.close();
+            return null;
+        }
+
+        buffer.flip();
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data);
+        Packet packet = Utils.deserializePacket(data);
+        logger.info(String.format("Received packet from server: %s", packet));
+
+        return packet;
+    }
+
     /**
      * Gets the current client channel.
+     * 
      * @return the {@code SocketChannel} channel of this client.
      */
     public SocketChannel getChannel() {
@@ -122,6 +145,7 @@ public class HiveClient {
 
     /**
      * Stops the client.
+     * 
      * @throws IOException any errors causing a shutdown failure.
      */
     public void stop() throws IOException {
@@ -137,8 +161,7 @@ public class HiveClient {
             client.start();
         } catch (IOException e) {
             System.out.printf(
-                "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace()
-            );
+                    "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace());
         }
     }
 }
