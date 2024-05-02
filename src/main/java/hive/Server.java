@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * The server can be stopped by typing "stop" in the console.
  * Created by SixEyes on 2024-04-07.
  */
-public class Server {
+public class Server implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
@@ -168,8 +168,17 @@ public class Server {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        Server server = new Server(25565);
-        server.start();
+    public static void main(String[] args) throws Exception {
+        try(Server server = new Server(25565)) {
+            server.start();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        
+    }
+
+    @Override
+    public void close() throws Exception {
+        stop();
     }
 }
