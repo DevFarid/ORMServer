@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -198,6 +197,11 @@ public class Server implements AutoCloseable {
         this.serverChannel.close();
     }
 
+    @Override
+    public void close() throws Exception {
+        stop();
+    }
+
     public static void main(String[] args) throws Exception {
         try(Server server = new Server(25565)) {
             server.start();
@@ -207,10 +211,5 @@ public class Server implements AutoCloseable {
             );
         }
         
-    }
-
-    @Override
-    public void close() throws Exception {
-        stop();
     }
 }

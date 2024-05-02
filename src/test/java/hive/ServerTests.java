@@ -85,6 +85,7 @@ public class ServerTests {
         
         Assertions.assertTrue(server.getConnectedClients().size() == 1);
         server.close();
+        clientRef.get().stop();
     }
     
     //Test server receiving multiple client connections and sending messages to all clients
