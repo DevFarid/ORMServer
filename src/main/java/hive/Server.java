@@ -23,8 +23,6 @@ public class Server implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
-
-    // State variable of the server.
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public Server(int port) throws IOException {
@@ -35,16 +33,6 @@ public class Server implements AutoCloseable {
         this.serverChannel.configureBlocking(false);
         this.serverChannel.socket().bind(new InetSocketAddress(port));
         this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-
-        // Add shutdown hook to close channels. Code might be redundant here, need to double-check.
-        Runtime.getRuntime().addShutdownHook((new Thread(() -> {
-            try {
-                serverChannel.close();
-                selector.close();
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error closing server.", e);
-            }
-        })));
     }
 
     /**
@@ -53,20 +41,17 @@ public class Server implements AutoCloseable {
      */
     private Thread scannerThread() {
         return new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            try {
+            try (Scanner scanner = new Scanner(System.in)) {
                 while (true) {
                     if (scanner.next().equals("stop")) {
                         try {
                             stop();
                         } catch (IOException e) {
-                            throw new RuntimeException(e);
+                            logger.log(Level.SEVERE, "Error stopping server.", e);
                         }
                         break;
                     }
                 }
-            } finally {
-                scanner.close();
             }
         });
     }
@@ -88,7 +73,9 @@ public class Server implements AutoCloseable {
             while (running.get()) {
                 try {
                     // A channel is ready.
-                    selector.select();
+                    int selectedResult = this.selector.select();
+                    if(selectedResult == 0) { continue; }
+
                     Set<SelectionKey> selectedKey = selector.selectedKeys();
                     Iterator<SelectionKey> keyIterator = selectedKey.iterator();
 
@@ -172,7 +159,9 @@ public class Server implements AutoCloseable {
         try(Server server = new Server(25565)) {
             server.start();
         } catch(IOException e) {
-            e.printStackTrace();
+            System.out.printf(
+                "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace()
+            );
         }
         
     }
