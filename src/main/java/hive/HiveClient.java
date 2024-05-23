@@ -1,5 +1,7 @@
 package hive;
 
+import hive.event.NetworkEvent;
+import hive.event.NetworkEventListener;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 import misc.Utils;
@@ -10,6 +12,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +26,7 @@ public class HiveClient {
     private SocketChannel clientChannel;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Thread scannerThread = scannerThread();
+    private final List<NetworkEventListener> listeners = new ArrayList<>();
 
     public HiveClient(String host, int port) {
         try {
@@ -42,6 +47,7 @@ public class HiveClient {
         return new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (true) {
+                if(!scanner.hasNextLine()) continue;
                 String message = scanner.nextLine();
                 if (message.isEmpty()) {
                     continue;
@@ -92,6 +98,11 @@ public class HiveClient {
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
                         sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
+                    } else if(key.isReadable()) {
+                        Packet packet = this.read();
+                        if (packet != null) {
+                            notifyListeners(packet);
+                        }
                     }
                 }
             }
@@ -116,7 +127,7 @@ public class HiveClient {
         }
     }
 
-    private Packet read() throws IOException {
+    protected Packet read() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         int read = this.clientChannel.read(buffer);
         if (read == -1) {
@@ -144,6 +155,34 @@ public class HiveClient {
     }
 
     /**
+     * Adds a network event listener to the client.
+     * @param listener the new listener to listen to.
+     */
+    public void addNetworkEventListener(NetworkEventListener listener) {
+        this.listeners.add(listener);
+    }
+
+    /**
+     * Removes a network event listener from the client.
+     * @param listener the listener to remove.
+     */
+    public void removeNetworkEventListener(NetworkEventListener listener) {
+        this.listeners.remove(listener);
+    }
+
+    /**
+     * Notifies all listeners of a new message.
+     * This fires the {@code onMessageReceived} event for all listeners.
+     * @param packet the received packet.
+     */
+    private void notifyListeners(Packet packet) {
+        NetworkEvent event = new NetworkEvent(this, packet);
+        for (NetworkEventListener listener : listeners) {
+            listener.onMessageReceived(event);
+        }
+    }
+
+    /**
      * Stops the client.
      * 
      * @throws IOException any errors causing a shutdown failure.
@@ -153,6 +192,7 @@ public class HiveClient {
         scannerThread.interrupt();
         this.selector.close();
         this.clientChannel.close();
+        this.listeners.clear();
     }
 
     public static void main(String[] args) {

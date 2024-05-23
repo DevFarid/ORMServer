@@ -1,10 +1,7 @@
 package hive;
-import org.checkerframework.checker.units.qual.t;
 import org.junit.jupiter.api.*;
 
-import hive.packets.Packet;
 import hive.packets.PacketType;
-import misc.Utils;
 
 
 import java.io.IOException;
@@ -12,6 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -145,10 +143,11 @@ public class ServerTests {
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
         final ExecutorService executor = Executors.newFixedThreadPool(3);
-        
+        String packetMessage = String.format("%s Hello World %s", Math.random() * 100, Math.random() * 100);
+
         executor.submit(server::start);
         latch.await(500, TimeUnit.MILLISECONDS);
-        
+
         executor.submit(() -> {
             clientRef1.set(new HiveClient("localhost", 8085));
             try {
@@ -158,7 +157,7 @@ public class ServerTests {
             }
         });
         latch.await(500, TimeUnit.MILLISECONDS);
-        
+
         executor.submit(() -> {
             clientRef2.set(new HiveClient("localhost", 8085));
             try {
@@ -168,20 +167,38 @@ public class ServerTests {
             }
         });
         latch.await(500, TimeUnit.MILLISECONDS);
-        
+
+        final AtomicBoolean messageReceivedClient1 = new AtomicBoolean(false);
+        final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
+
+        clientRef1.get().addNetworkEventListener(event -> {
+            if (event.getPacket().getType() == PacketType.MESSAGE &&
+                    packetMessage.equals(event.getPacket().getData())) {
+                messageReceivedClient1.set(true);
+            }
+        });
+
+        clientRef2.get().addNetworkEventListener(event -> {
+            if (event.getPacket().getType() == PacketType.MESSAGE &&
+                    packetMessage.equals(event.getPacket().getData())) {
+                messageReceivedClient2.set(true);
+            }
+        });
+
         // Send message to all clients
-        server.broadcastMessage("Hello World" /* some date object here*/);
-        
+        server.broadcastMessage(packetMessage);
+
         latch.await(500, TimeUnit.MILLISECONDS);
-        
-        // Check if all clients received the message
-        Assertions.assertEquals(clientRef1.get().read().getData(), "Hello World");
-        Assertions.assertEquals(clientRef2.get().read().getData(), "Hello World");
+
+        // Assertions
+        Assertions.assertTrue(messageReceivedClient1.get(), "Client 1 did not receive the expected message.");
+        Assertions.assertTrue(messageReceivedClient2.get(), "Client 2 did not receive the expected message.");
 
         server.close();
         clientRef1.get().stop();
         clientRef2.get().stop();
     }
+
     
     // Test server receiving a packet from a client.
     @Test

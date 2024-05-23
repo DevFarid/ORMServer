@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class Utils {
     public static byte[] serializePacket(Packet packet) throws IOException {
-        return (packet.getPacketType() + "|" + packet.getTable() + "|" + packet.getData()).getBytes();
+        return (packet.getType() + "|" + packet.getTable() + "|" + packet.getData()).getBytes();
     }
 
     public static Packet deserializePacket(byte[] data) {

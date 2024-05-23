@@ -15,7 +15,7 @@ public class Packet implements Serializable {
         this.data = data;
     }
 
-    public PacketType getPacketType() {
+    public PacketType getType() {
         return packetType;
     }
 
