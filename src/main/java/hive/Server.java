@@ -61,22 +61,22 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                                 logger.log(Level.SEVERE, "Error stopping server.", e);
                             }
                             break;
-                        } else if(message.equalsIgnoreCase("clist")) {
+                        } else if(message.equalsIgnoreCase("clients")) {
                             Set<SocketChannel> clients = getConnectedClients();
-                            StringBuilder sbuilder = new StringBuilder();
+                            StringBuilder strBuilder = new StringBuilder();
                             if(!clients.isEmpty()) {
                                 clients.forEach(client -> {
                                     try {
                                         if(client.isOpen() && client.isConnected())
-                                            sbuilder.append(client.getRemoteAddress()).append("\n");
+                                            strBuilder.append(client.getRemoteAddress()).append("\n");
                                     } catch (IOException e) {
                                         logger.log(Level.SEVERE, "Error retrieve the connected client list.", e);
                                     }
                                 });
-                                logger.info(String.format("Connected clients: \n%s", sbuilder.toString()));
+                                logger.info(String.format("Connected clients: \n%s", strBuilder));
                             }
                         } else if(message.equalsIgnoreCase("db")) {
-                            logger.info("Database connection: " + dbConn.getConnectionSource());
+                            logger.info("Database connection: " + this.dbConn.getConnectionSource());
                         }
                     }
                 }

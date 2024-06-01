@@ -13,7 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -34,13 +33,18 @@ public class ServerTests {
         }
     }
 
-    // Test for unreachability once server is closed.
+    // Test for reachability once server is closed.
     @Test
     @Order(2)
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
         final Server server = new Server(DBEnv.DEV,8081);
+        final CountDownLatch latch = new CountDownLatch(1);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         server.close();
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         Assertions.assertFalse(server.isOpen());
     }
 
@@ -54,13 +58,7 @@ public class ServerTests {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         
         Assertions.assertFalse(server.isRunning());
-        executor.submit(() -> {
-            try {
-                server.start();
-            } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error starting server in the background.", e);
-            }
-        });
+        executor.submit(server::start);
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         Assertions.assertTrue(server.isRunning());
