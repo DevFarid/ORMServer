@@ -16,6 +16,11 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("com.google.guava:guava:33.1.0-jre")
     annotationProcessor('org.projectlombok:lombok:1.18.20')
+
+
+    implementation 'com.j256.ormlite:ormlite-jdbc:6.1'
+    implementation 'com.j256.ormlite:ormlite-core:6.1'
+    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
 }
 
 test {

@@ -1,4 +1,5 @@
 package hive;
+import hive.database.DBEnv;
 import hive.packets.Packet;
 import org.junit.jupiter.api.*;
 
@@ -28,7 +29,7 @@ public class ServerTests {
     @Order(1)
     @DisplayName("test server is open and reachable.")
     public void testServerOpen() throws Exception {
-        try(Server server = new Server(8080)) {
+        try(Server server = new Server(DBEnv.DEV,8080)) {
             Assertions.assertTrue(server.isOpen());
         }
     }
@@ -38,7 +39,7 @@ public class ServerTests {
     @Order(2)
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
-        final Server server = new Server(8081);
+        final Server server = new Server(DBEnv.DEV,8081);
         server.close();
         Assertions.assertFalse(server.isOpen());
     }
@@ -48,7 +49,7 @@ public class ServerTests {
     @Order(3)
     @DisplayName("test server is reachable & running for operations.")
     public void testServerRunning() throws Exception {
-        final Server server = new Server(8082);
+        final Server server = new Server(DBEnv.DEV,8082);
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         
@@ -72,7 +73,7 @@ public class ServerTests {
     @Order(4)
     @DisplayName("test client is connected to the server.")
     public void testServerReceiveClientConnection() throws Exception {
-        final Server server = new Server(8083);
+        final Server server = new Server(DBEnv.DEV,8083);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -101,7 +102,7 @@ public class ServerTests {
     @Order(5)
     @DisplayName("test server receives multiple client connections.")
     public void testServerReceiveMultipleClientConnections() throws Exception {
-        final Server server = new Server(8084);
+        final Server server = new Server(DBEnv.DEV,8084);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
@@ -142,7 +143,7 @@ public class ServerTests {
     @Order(6)
     @DisplayName("test server sends messages to all clients.")
     public void testServerSendMessagesToAllClients() throws Exception {
-        final Server server = new Server(8085);
+        final Server server = new Server(DBEnv.DEV,8085);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
@@ -212,7 +213,7 @@ public class ServerTests {
     @DisplayName("test server receiving a packet from a connected client.")
     public void testServerReceivePacketFromConnectedClient() throws Exception {
 
-        final Server server = new Server(8086);
+        final Server server = new Server(DBEnv.DEV,8086);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
 

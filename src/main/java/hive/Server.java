@@ -1,5 +1,7 @@
 package hive;
 
+import hive.database.DBConnection;
+import hive.database.DBEnv;
 import hive.event.NetworkEventNotifier;
 import hive.packets.Packet;
 import hive.packets.PacketType;
@@ -9,6 +11,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Scanner;
@@ -28,8 +31,9 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
     private final Selector selector;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Set<SocketChannel> connectedClients = new HashSet<>();
+    private final DBConnection dbConn;
 
-    public Server(int port) throws IOException {
+    public Server(DBEnv env, int port) throws IOException, SQLException {
         logger.info(String.format("Opening a socket on port %d", port));
         // Open selector and server channel
         this.selector = Selector.open();
@@ -37,6 +41,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         this.serverChannel.configureBlocking(false);
         this.serverChannel.socket().bind(new InetSocketAddress(port));
         this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        this.dbConn = new DBConnection(env);
     }
 
     /**
@@ -70,6 +75,8 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                                 });
                                 logger.info(String.format("Connected clients: \n%s", sbuilder.toString()));
                             }
+                        } else if(message.equalsIgnoreCase("db")) {
+                            logger.info("Database connection: " + dbConn.getConnectionSource());
                         }
                     }
                 }
@@ -196,10 +203,13 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @throws IOException if an I/O error occurs.
      */
     public void stop() throws IOException {
-        running.set(false);
-        this.selector.wakeup();
-        this.selector.close();
-        this.serverChannel.close();
+        if(running.get()) {
+            running.set(false);
+            this.selector.wakeup();
+            this.selector.close();
+            this.serverChannel.close();
+            this.dbConn.close();
+        }
     }
 
     @Override
@@ -245,7 +255,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
 
 
     public static void main(String[] args) throws Exception {
-        try(Server server = new Server(25565)) {
+        try(Server server = new Server(DBEnv.DEV, 25565)) {
             server.start();
         } catch(IOException e) {
             System.out.printf(
