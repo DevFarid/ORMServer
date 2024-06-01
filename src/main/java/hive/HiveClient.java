@@ -1,5 +1,6 @@
 package hive;
 
+import hive.event.NetworkEventNotifier;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 import misc.Utils;
@@ -16,12 +17,12 @@ import java.util.logging.Logger;
 import java.util.Iterator;
 import java.util.Scanner;
 
-public class HiveClient {
+public class HiveClient extends NetworkEventNotifier {
     private final Logger logger = Logger.getLogger(HiveClient.class.getName());
     private Selector selector;
     private SocketChannel clientChannel;
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private Thread messageThread;
+    private Thread scannerThread = scannerThread();
 
     public HiveClient(String host, int port) {
         try {
@@ -36,20 +37,48 @@ public class HiveClient {
     }
 
     /**
+     * Thread to read messages from the console and send them to the server.
+     */
+    private Thread scannerThread() {
+        return new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                if(!scanner.hasNextLine()) continue;
+                String message = scanner.nextLine();
+                if (message.isEmpty()) {
+                    continue;
+                }
+                if (message.equals("stop")) {
+                    try {
+                        stop();
+                    } catch (IOException e) {
+                        logger.log(Level.SEVERE, "Error stopping client.", e);
+                    }
+                    break;
+                }
+                sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", message));
+            }
+            scanner.close();
+        });
+    }
+
+    /**
      * Starts the client and listens for messages from the server.
      */
-    public void start() {
+    public void start() throws IOException {
         running.set(true);
 
         try {
-            messageThread = scannerThread();
-            messageThread.start();
+            scannerThread = scannerThread();
+            scannerThread.start();
             while (running.get()) {
-                int selectedResult = selector.select();
-                if(selectedResult == 0) { continue; }
-                
-                Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
-                while(keyIterator.hasNext()) {
+                int selectedResult = this.selector.select();
+                if (selectedResult == 0) {
+                    continue;
+                }
+
+                Iterator<SelectionKey> keyIterator = this.selector.selectedKeys().iterator();
+                while (keyIterator.hasNext()) {
                     SelectionKey key = keyIterator.next();
                     keyIterator.remove();
 
@@ -59,18 +88,17 @@ public class HiveClient {
                         if (channel.isConnectionPending()) {
                             channel.finishConnect();
                         }
-                        
+
                         // Register
-                        channel.register(selector, SelectionKey.OP_READ);
+                        channel.register(this.selector, SelectionKey.OP_READ);
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
                         sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
-                    }
-
-                    //
-                    if (key.isReadable()) {
-                        SocketChannel channel = (SocketChannel) key.channel();
-                        channel.close();
+                    } else if(key.isReadable()) {
+                        Packet packet = this.read();
+                        if (packet != null) {
+                            notifyListeners(packet, logger);
+                        }
                     }
                 }
             }
@@ -81,45 +109,13 @@ public class HiveClient {
         }
     }
 
-    /**
-     * Thread to read messages from the console and send them to the server.
-     */
-    private Thread scannerThread() {
-        return new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            while (true) {
-                String message = scanner.nextLine();
-                if (message.equals("stop")) {
-                    stop();
-                    break;
-                }
-                sendPacket(new Packet(PacketType.MESSAGE, "message-chat", message));
-            }
-            scanner.close();
-        });
-    }
-
-    /**
-     * Stops the client.
-     */
-    public void stop() {
-        running.set(false);
-        messageThread.interrupt();
-        try {
-            selector.close();
-            clientChannel.close();
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error stopping client.", e);
-        }
-    }
-
     // method to send message to server
     public void sendPacket(Packet p) {
         try {
-            byte[] serializedPacket = Utils.serialize(p);
+            byte[] serializedPacket = Utils.serializePacket(p);
             ByteBuffer buffer = ByteBuffer.wrap(serializedPacket);
 
-            while(buffer.hasRemaining()) {
+            while (buffer.hasRemaining()) {
                 clientChannel.write(buffer);
             }
         } catch (IOException e) {
@@ -127,8 +123,53 @@ public class HiveClient {
         }
     }
 
+    protected Packet read() throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        int read = this.clientChannel.read(buffer);
+        if (read == -1) {
+            logger.info("Server has closed the connection.");
+            this.clientChannel.close();
+            return null;
+        }
+
+        buffer.flip();
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data);
+        Packet packet = Utils.deserializePacket(data);
+        logger.info(String.format("Received packet from server: %s", packet));
+
+        return packet;
+    }
+
+    /**
+     * Gets the current client channel.
+     * 
+     * @return the {@code SocketChannel} channel of this client.
+     */
+    public SocketChannel getChannel() {
+        return this.clientChannel;
+    }
+
+    /**
+     * Stops the client.
+     * 
+     * @throws IOException any errors causing a shutdown failure.
+     */
+    public void stop() throws IOException {
+        running.set(false);
+        scannerThread.interrupt();
+        this.selector.close();
+        this.clientChannel.close();
+        this.clearObservers();
+    }
+
     public static void main(String[] args) {
         HiveClient client = new HiveClient("localhost", 25565);
-        client.start();
+        try {
+            client.start();
+        } catch (IOException e) {
+            System.out.printf(
+                    "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace());
+        }
     }
 }

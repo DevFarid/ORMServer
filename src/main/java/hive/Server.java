@@ -1,12 +1,15 @@
 package hive;
 
+import hive.event.NetworkEventNotifier;
 import hive.packets.Packet;
+import hive.packets.PacketType;
 import misc.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Set;
@@ -19,32 +22,21 @@ import java.util.logging.Logger;
  * The server can be stopped by typing "stop" in the console.
  * Created by SixEyes on 2024-04-07.
  */
-public class Server {
+public class Server extends NetworkEventNotifier implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
-
-    // State variable of the server.
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final Set<SocketChannel> connectedClients = new HashSet<>();
 
     public Server(int port) throws IOException {
-        logger.info(String.format("Starting server on port %d", port));
+        logger.info(String.format("Opening a socket on port %d", port));
         // Open selector and server channel
         this.selector = Selector.open();
         this.serverChannel = ServerSocketChannel.open();
         this.serverChannel.configureBlocking(false);
         this.serverChannel.socket().bind(new InetSocketAddress(port));
         this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-
-        // Add shutdown hook to close channels. Code might be redundant here, need to double-check.
-        Runtime.getRuntime().addShutdownHook((new Thread(() -> {
-            try {
-                serverChannel.close();
-                selector.close();
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error closing server.", e);
-            }
-        })));
     }
 
     /**
@@ -53,20 +45,34 @@ public class Server {
      */
     private Thread scannerThread() {
         return new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            try {
+            try (Scanner scanner = new Scanner(System.in)) {
                 while (true) {
-                    if (scanner.next().equals("stop")) {
-                        try {
-                            stop();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                    if(scanner.hasNextLine()) {
+                        String message = scanner.nextLine().trim();
+                        if(message.equalsIgnoreCase("stop")) {
+                            try {
+                                stop();
+                            } catch (IOException e) {
+                                logger.log(Level.SEVERE, "Error stopping server.", e);
+                            }
+                            break;
+                        } else if(message.equalsIgnoreCase("clist")) {
+                            Set<SocketChannel> clients = getConnectedClients();
+                            StringBuilder sbuilder = new StringBuilder();
+                            if(!clients.isEmpty()) {
+                                clients.forEach(client -> {
+                                    try {
+                                        if(client.isOpen() && client.isConnected())
+                                            sbuilder.append(client.getRemoteAddress()).append("\n");
+                                    } catch (IOException e) {
+                                        logger.log(Level.SEVERE, "Error retrieve the connected client list.", e);
+                                    }
+                                });
+                                logger.info(String.format("Connected clients: \n%s", sbuilder.toString()));
+                            }
                         }
-                        break;
                     }
                 }
-            } finally {
-                scanner.close();
             }
         });
     }
@@ -80,6 +86,7 @@ public class Server {
     public void start() {
         // Start the server if it is not running.
         if(!running.get()) {
+            logger.info("Now accepting operations from clients.");
             running.set(true);
 
             // register scanner thread
@@ -88,7 +95,9 @@ public class Server {
             while (running.get()) {
                 try {
                     // A channel is ready.
-                    selector.select();
+                    int selectedResult = this.selector.select();
+                    if(selectedResult == 0) { continue; }
+
                     Set<SelectionKey> selectedKey = selector.selectedKeys();
                     Iterator<SelectionKey> keyIterator = selectedKey.iterator();
 
@@ -127,6 +136,7 @@ public class Server {
         SocketChannel clientChannel = serverChannel.accept();
         clientChannel.configureBlocking(false);
         clientChannel.register(selector, SelectionKey.OP_READ);
+        connectedClients.add(clientChannel);
         logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
     }
 
@@ -135,17 +145,18 @@ public class Server {
      * @param key the selection key.
      * @throws IOException if an I/O error occurs.
      */
-    public void read(SelectionKey key) throws IOException {
+    public Packet read(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
-        if(clientChannel == null) { return; }
+        if(clientChannel == null) { return null; }
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         int read = clientChannel.read(buffer);
 
         if(read == -1) {
             logger.info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
+            connectedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
-            return;
+            return null;
         }
         
         buffer.flip();
@@ -153,6 +164,31 @@ public class Server {
         buffer.get(data);
         Packet packet = Utils.deserializePacket(data);
         logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
+        notifyListeners(packet, logger);
+        return packet;
+    }
+
+    /**
+     * Checks if the server is running. To consider the server to be running,
+     * a check is done on see if both the server channel and the selector are open,
+     * as well as the selector managing key operations.
+     * @return {@code true} if the server is running, {@code false} otherwise.
+     */
+    public boolean isRunning() {
+        return ( this.serverChannel.isOpen() && this.selector.isOpen() ) && running.get();
+    }
+
+    /**
+     * Checks if the server is open. This means that the server channel and the selector are open.
+     * But doesn't guarantee that the server is running, i.e. managing key operations (accept, read, write).
+     * @return {@code true} if the server is reachable via internet, {@code false} otherwise.
+     */
+    public boolean isOpen() {
+        return this.serverChannel.isOpen() && this.selector.isOpen();
+    }
+
+    public Set<SocketChannel> getConnectedClients() {
+        return this.connectedClients;
     }
 
     /**
@@ -160,16 +196,61 @@ public class Server {
      * @throws IOException if an I/O error occurs.
      */
     public void stop() throws IOException {
-        if(running.get()) {
-            running.set(false);
-            this.selector.wakeup();
-            this.selector.close();
-            this.serverChannel.close();
-        }
+        running.set(false);
+        this.selector.wakeup();
+        this.selector.close();
+        this.serverChannel.close();
     }
 
-    public static void main(String[] args) throws IOException {
-        Server server = new Server(25565);
-        server.start();
+    @Override
+    public void close() throws Exception {
+        stop();
+    }
+
+
+    /**
+     * Send a packet to a client.
+     * @param client the client to send the packet to.
+     * @param packet the packet to send.
+     * @throws IOException if an I/O error occurs.
+     */
+    public void send(SocketChannel client, Packet packet) throws IOException {
+        if(client == null) return;
+        if(client.isOpen() && client.isConnected())
+            client.write(ByteBuffer.wrap(Utils.serializePacket(packet)));
+    }
+
+    /**
+     * Send a packet to all connected clients.
+     * @param packet the packet to send.
+     */
+    public void sendToAll(Packet packet) {
+        connectedClients.forEach(client -> {
+            try {
+                send(client, packet);
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Error sending packet to client.", e);
+            }
+        });
+    }
+
+
+    /**
+     * Broadcast a message to all connected clients.
+     * @param message the message to broadcast.
+     */
+    public void broadcastMessage(String message) {
+        this.sendToAll(new Packet(PacketType.MESSAGE, "message-chat", message));
+    }
+
+
+    public static void main(String[] args) throws Exception {
+        try(Server server = new Server(25565)) {
+            server.start();
+        } catch(IOException e) {
+            System.out.printf(
+                "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace()
+            );
+        }
     }
 }
