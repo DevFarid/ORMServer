@@ -1,14 +1,12 @@
 package hive.database;
 
 import hive.Server;
-import hive.ServerTests;
 import org.junit.jupiter.api.*;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 /**
  * Tests the `DBConnection` class mostly with other respective classes.
@@ -16,14 +14,13 @@ import java.util.logging.Logger;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class DatabaseTests {
-    private final Logger logger = Logger.getLogger(ServerTests.class.getName());
     private static final int DELAY_MS = 50;
 
-    // Test for connection source once server starts..
+    // Test for connection source once server starts.
     @Test
     @Order(1)
-    @DisplayName("test server is open and reachable.")
-    public void testServerOpen() throws Exception {
+    @DisplayName("test database is closed and reachable.")
+    public void testServerDatabaseOpen() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
             try(Server server = new Server(DBEnv.DEV,8080)) {
@@ -32,5 +29,23 @@ public class DatabaseTests {
                 Assertions.assertTrue(server.canInteractWithData());
             }
         }
+    }
+
+    // Test for connection source reachability once server is closed.
+    @Test
+    @Order(1)
+    @DisplayName("test database is closed and unreachable.")
+    public void testServerDatabaseClosed() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        Server server = new Server(DBEnv.DEV,8080);
+
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        server.close();
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        Assertions.assertFalse(server.canInteractWithData());
     }
 }
