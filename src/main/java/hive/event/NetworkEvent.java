@@ -1,23 +1,22 @@
 package hive.event;
 
-import hive.HiveClient;
 import hive.packets.Packet;
 
 // Define an event class
-public class NetworkEvent {
-    private final HiveClient client;
+public final class NetworkEvent {
+    private final NetworkEventNotifier packetSender;
     private final Packet packet;
 
-    public NetworkEvent(HiveClient client, Packet packet) {
-        this.client = client;
+    public NetworkEvent(NetworkEventNotifier sender, Packet packet) {
+        this.packetSender = sender;
         this.packet = packet;
     }
 
-    public HiveClient getClient() {
-        return client;
+    public NetworkEventNotifier getSender() {
+        return this.packetSender;
     }
 
     public Packet getPacket() {
-        return packet;
+        return this.packet;
     }
 }

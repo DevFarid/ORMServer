@@ -1,4 +1,5 @@
 package hive;
+import hive.packets.Packet;
 import org.junit.jupiter.api.*;
 
 import hive.packets.PacketType;
@@ -21,7 +22,7 @@ import java.util.logging.Logger;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ServerTests {
     private final Logger logger = Logger.getLogger(ServerTests.class.getName());
-    
+    private static final int DELAY_MS = 50;
     // Test for server reachability and that channels are open.
     @Test
     @Order(1)
@@ -60,9 +61,10 @@ public class ServerTests {
             }
         });
 
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         Assertions.assertTrue(server.isRunning());
         server.close();
+        executor.close();
     }
 
     // Test server receive Client Connection.
@@ -76,7 +78,7 @@ public class ServerTests {
         final ExecutorService executor = Executors.newFixedThreadPool(2);
         
         executor.submit(server::start);
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
     
         executor.submit(() -> {
             clientRef.set(new HiveClient("localhost", 8083));
@@ -86,11 +88,12 @@ public class ServerTests {
                 e.printStackTrace();
             }
         });
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         Assertions.assertTrue(server.getConnectedClients().size() == 1);
         server.close();
         clientRef.get().stop();
+        executor.close();
     }
     
     //Test server receiving multiple client connections\
@@ -105,7 +108,7 @@ public class ServerTests {
         final ExecutorService executor = Executors.newFixedThreadPool(3);
         
         executor.submit(server::start);
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         executor.submit(() -> {
             clientRef1.set(new HiveClient("localhost", 8084));
@@ -115,7 +118,7 @@ public class ServerTests {
                 e.printStackTrace();
             }
         });
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         executor.submit(() -> {
             clientRef2.set(new HiveClient("localhost", 8084));
@@ -125,12 +128,13 @@ public class ServerTests {
                 e.printStackTrace();
             }
         });
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         Assertions.assertTrue(server.getConnectedClients().size() == 2);
         server.close();
         clientRef1.get().stop();
         clientRef2.get().stop();
+        executor.close();
     }
 
     //Test server sending messages to all clients
@@ -146,7 +150,7 @@ public class ServerTests {
         String packetMessage = String.format("%s Hello World %s", Math.random() * 100, Math.random() * 100);
 
         executor.submit(server::start);
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
             clientRef1.set(new HiveClient("localhost", 8085));
@@ -156,7 +160,7 @@ public class ServerTests {
                 e.printStackTrace();
             }
         });
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
             clientRef2.set(new HiveClient("localhost", 8085));
@@ -166,7 +170,7 @@ public class ServerTests {
                 e.printStackTrace();
             }
         });
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         final AtomicBoolean messageReceivedClient1 = new AtomicBoolean(false);
         final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
@@ -188,7 +192,7 @@ public class ServerTests {
         // Send message to all clients
         server.broadcastMessage(packetMessage);
 
-        latch.await(500, TimeUnit.MILLISECONDS);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         // Assertions
         Assertions.assertTrue(messageReceivedClient1.get(), "Client 1 did not receive the expected message.");
@@ -197,24 +201,76 @@ public class ServerTests {
         server.close();
         clientRef1.get().stop();
         clientRef2.get().stop();
+
+        executor.close();
     }
 
     
-    // Test server receiving a packet from a client.
+    // Test server receiving a packet from two clients.
     @Test
     @Order(7)
     @DisplayName("test server receiving a packet from a connected client.")
     public void testServerReceivePacketFromConnectedClient() throws Exception {
 
         final Server server = new Server(8086);
-        final AtomicReference<HiveClient> clientRef = new AtomicReference<>(new HiveClient("localhost", 8086));
-        final CountDownLatch latch = new CountDownLatch(2);
+        final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
+        final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
 
-        Assertions.assertTrue(true);
+        final CountDownLatch latch = new CountDownLatch(2);
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
+
+
+        final AtomicBoolean messageReceivedClient1 = new AtomicBoolean(false);
+        final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
+
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        executor.submit(() -> {
+            clientRef1.set(new HiveClient("localhost", 8086));
+            try {
+                clientRef1.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        executor.submit(() -> {
+            clientRef2.set(new HiveClient("localhost", 8086));
+            try {
+                clientRef2.get().start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        server.addNetworkEventListener(event -> {
+            if (event.getPacket().getType() == PacketType.MESSAGE &&
+                    "Hello Server from Client 1".equals(event.getPacket().getData())) {
+                messageReceivedClient1.set(true);
+            } else if(event.getPacket().getType() == PacketType.MESSAGE &&
+                    "Hello Server from Client 2".equals(event.getPacket().getData())) {
+                messageReceivedClient2.set(true);
+            }
+        });
+
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        clientRef1.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 1"));
+        clientRef2.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 2"));
+
+
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        // Assertions
+        Assertions.assertTrue(messageReceivedClient1.get(), "Server did not receive the expected message from Client 1.");
+        Assertions.assertTrue(messageReceivedClient2.get(), "Server did not receive the expected message from Client 2.");
+
+        clientRef1.get().stop();
+        clientRef2.get().stop();
         server.close();
-        clientRef.get().stop();
+        executor.close();
     }
-    
-    // Test server receiving multiple simoultaneous packets from many clients.
     
 }

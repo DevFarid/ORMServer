@@ -1,5 +1,6 @@
 package hive;
 
+import hive.event.NetworkEventNotifier;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 import misc.Utils;
@@ -21,12 +22,12 @@ import java.util.logging.Logger;
  * The server can be stopped by typing "stop" in the console.
  * Created by SixEyes on 2024-04-07.
  */
-public class Server implements AutoCloseable {
+public class Server extends NetworkEventNotifier implements AutoCloseable {
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final ServerSocketChannel serverChannel;
     private final Selector selector;
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private Set<SocketChannel> connectedClients = new HashSet<>();
+    private final Set<SocketChannel> connectedClients = new HashSet<>();
 
     public Server(int port) throws IOException {
         logger.info(String.format("Opening a socket on port %d", port));
@@ -163,7 +164,7 @@ public class Server implements AutoCloseable {
         buffer.get(data);
         Packet packet = Utils.deserializePacket(data);
         logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
-
+        notifyListeners(packet, logger);
         return packet;
     }
 
@@ -251,6 +252,5 @@ public class Server implements AutoCloseable {
                 "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace()
             );
         }
-        
     }
 }
