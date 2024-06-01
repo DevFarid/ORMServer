@@ -1,6 +1,7 @@
 package hive.database;
 
 import com.j256.ormlite.support.ConnectionSource;
+import hive.packets.Packet;
 
 /**
  * This class will manage entities within the database in a CRUD manner.
@@ -12,5 +13,14 @@ public class AppRepository {
 
     public AppRepository(ConnectionSource connectionSource) {
         this.connectionSource = connectionSource;
+    }
+
+    /**
+     * Decompose the packet into the database.
+     * Once the packet is decomposed, it will be identified as to what
+     * type of packet it is, so that the operation can be performed accordingly.
+     * @param packet packet to decompose.
+     */
+    public void decompose(Packet packet) {
     }
 }

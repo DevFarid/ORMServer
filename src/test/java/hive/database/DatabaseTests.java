@@ -33,7 +33,7 @@ public class DatabaseTests {
 
     // Test for connection source reachability once server is closed.
     @Test
-    @Order(1)
+    @Order(2)
     @DisplayName("test database is closed and unreachable.")
     public void testServerDatabaseClosed() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
