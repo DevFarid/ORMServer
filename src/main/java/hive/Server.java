@@ -198,25 +198,6 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         return this.connectedClients;
     }
 
-    /**
-     * Stops the server.
-     * @throws IOException if an I/O error occurs.
-     */
-    public void stop() throws IOException {
-        if(running.get()) {
-            running.set(false);
-            this.selector.wakeup();
-            this.selector.close();
-            this.serverChannel.close();
-            this.dbConn.close();
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-        stop();
-    }
-
 
     /**
      * Send a packet to a client.
@@ -251,6 +232,45 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      */
     public void broadcastMessage(String message) {
         this.sendToAll(new Packet(PacketType.MESSAGE, "message-chat", message));
+    }
+
+    /**
+     * Checks if the server can interact with data (i.e. crud operations on the database).
+     * To interact with data, the server must be open, running, and the database connection must be open.
+     * @return true if the satisfactory conditions are met, false otherwise.
+     */
+    public boolean canInteractWithData() {
+        boolean[] canInteract = {
+                this.isOpen(),
+                this.isRunning(),
+                this.dbConn.getConnectionSource() != null,
+                this.dbConn.getConnectionSource().isOpen(this.dbConn.getEnv().getDatabaseUrl())
+        };
+
+        for(boolean can : canInteract) {
+            if(!can) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Stops the server.
+     * @throws IOException if an I/O error occurs.
+     */
+    public void stop() throws IOException {
+        if(running.get()) {
+            running.set(false);
+            this.selector.wakeup();
+            this.selector.close();
+            this.serverChannel.close();
+            this.dbConn.close();
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        stop();
     }
 
 

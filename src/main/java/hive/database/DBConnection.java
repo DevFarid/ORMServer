@@ -16,9 +16,11 @@ public class DBConnection {
     private final Logger logger = Logger.getLogger(DBConnection.class.getName());
     private final ConnectionSource connectionSource;
     private final AppRepository appRepository;
+    private final DBEnv env;
 
     public DBConnection(DBEnv env) throws SQLException {
-        this.connectionSource = new JdbcPooledConnectionSource(env.getDatabaseUrl());
+        this.env = env;
+        this.connectionSource = new JdbcPooledConnectionSource(this.env.getDatabaseUrl());
         this.appRepository = new AppRepository(this.connectionSource);
     }
 
@@ -36,6 +38,14 @@ public class DBConnection {
      */
     public AppRepository getAppRepository() {
         return appRepository;
+    }
+
+    /**
+     * Get the database environment.
+     * @return database environment enum.
+     */
+    public DBEnv getEnv() {
+        return this.env;
     }
 
     /**
