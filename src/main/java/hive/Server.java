@@ -115,7 +115,17 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                         }
 
                         if(key.isReadable()) {
-                            read(key);
+                            Packet receivedPacket = read(key);
+                            if(receivedPacket != null) {
+                                switch (receivedPacket.getType()) {
+                                    case MESSAGE -> {
+                                        MSGPacket msgPacket = (MSGPacket) receivedPacket;
+                                        logger.info(String.format("Received message from %s: %s", key.channel(), msgPacket.getMessage()));
+                                    }
+                                    case SQL -> logger.info("Received SQL packet.");
+                                }
+                                notifyListeners(receivedPacket, logger);
+                            }
                         }
                     }
                 } catch (IOException e) {
@@ -163,11 +173,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         buffer.flip();
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
-        Packet packet = Utils.deserializePacket(data);
-        logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
-        // TODO: still need to handle different types of packets.
-        notifyListeners(packet, logger);
-        return packet;
+        return Utils.deserializePacket(data);
     }
 
     /**
@@ -202,6 +208,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         this.selector.wakeup();
         this.selector.close();
         this.serverChannel.close();
+        this.closeObservers();
     }
 
     @Override
