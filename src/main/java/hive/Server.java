@@ -115,14 +115,15 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                         }
 
                         if(key.isReadable()) {
+                            SocketChannel clientChannel = (SocketChannel) key.channel();
                             Packet receivedPacket = read(key);
                             if(receivedPacket != null) {
                                 switch (receivedPacket.getType()) {
                                     case MESSAGE -> {
                                         MSGPacket msgPacket = (MSGPacket) receivedPacket;
-                                        logger.info(String.format("Received message from %s: %s", key.channel(), msgPacket.getMessage()));
+                                        logger.info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
                                     }
-                                    case SQL -> logger.info("Received SQL packet.");
+                                    case SQL -> logger.info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
                                 }
                                 notifyListeners(receivedPacket, logger);
                             }

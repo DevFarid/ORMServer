@@ -9,15 +9,14 @@ import java.util.Map;
  */
 public class DBPacket extends Packet {
     private final String tableName;
-    private final Map<String, String> columns;  // Column name and its value
-    private String condition;
+    private final Map<String, String> columns = new HashMap<>();  // Column name and its value
+    private String condition = null;
     private final SQLCommandType commandType;
 
     public DBPacket(String tableName, SQLCommandType commandType) {
         super(PacketType.SQL);
         this.tableName = tableName;
         this.commandType = commandType;
-        this.columns = new HashMap<>();
     }
 
     public void addColumn(String columnName, String value) {
@@ -33,35 +32,31 @@ public class DBPacket extends Packet {
     }
 
     public Map<String, String> getColumns() {
-        return columns;
+        return this.columns;
     }
 
     public String getCondition() {
-        return condition;
+        return this.condition;
     }
 
     public SQLCommandType getCommandType() {
-        return commandType;
+        return this.commandType;
     }
 
     @Override
     public byte[] serialize() {
+        String columns = this.columns.entrySet().stream()
+                .map(e -> String.format("%s=%s", e.getKey(), e.getValue()))
+                .reduce("", (a, b) -> a.isEmpty() ? b : a + "," + b);
         if (condition != null && !condition.isEmpty()) {
-            return String.format("%s|%s|%s|%s|%s", this.getType(), this.commandType, this.tableName, this.columns, this.condition).getBytes();
+            return String.format("%s|%s|%s|%s|%s", this.getType(), this.commandType, this.tableName, columns, this.condition).getBytes();
         } else {
-            return String.format("%s|%s|%s|%s", this.getType(), this.commandType, this.tableName, this.columns).getBytes();
+            return String.format("%s|%s|%s|%s", this.getType(), this.commandType, this.tableName, columns).getBytes();
         }
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Command Type: ").append(commandType).append("\n");
-        builder.append("Table: ").append(tableName).append("\n");
-        builder.append("Columns: ").append(columns).append("\n");
-        if (condition != null && !condition.isEmpty()) {
-            builder.append("Condition: ").append(condition).append("\n");
-        }
-        return builder.toString();
+        return String.format("{SQLCMD: %s, Table: %s, Columns: %s, Condition: %s}", commandType, tableName, columns, condition);
     }
 }
