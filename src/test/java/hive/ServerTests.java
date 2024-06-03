@@ -46,6 +46,7 @@ public class ServerTests {
         server.close();
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         Assertions.assertFalse(server.isOpen());
+        executor.close();
     }
 
     // Test server is in operation mode.

@@ -137,7 +137,6 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @param key the selection key.
      * @throws IOException if an I/O error occurs.
      */
-
     public void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel clientChannel = serverChannel.accept();
