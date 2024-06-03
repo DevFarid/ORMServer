@@ -3,6 +3,7 @@ package hive;
 import hive.database.DBConnection;
 import hive.database.DBEnv;
 import hive.event.NetworkEventNotifier;
+import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 import misc.Utils;
@@ -121,7 +122,18 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                         }
 
                         if(key.isReadable()) {
-                            read(key);
+                            SocketChannel clientChannel = (SocketChannel) key.channel();
+                            Packet receivedPacket = read(key);
+                            if(receivedPacket != null) {
+                                switch (receivedPacket.getType()) {
+                                    case MESSAGE -> {
+                                        MSGPacket msgPacket = (MSGPacket) receivedPacket;
+                                        logger.info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
+                                    }
+                                    case SQL -> logger.info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                }
+                                notifyListeners(receivedPacket, logger);
+                            }
                         }
                     }
                 } catch (IOException e) {
@@ -137,6 +149,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @param key the selection key.
      * @throws IOException if an I/O error occurs.
      */
+
     public void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel clientChannel = serverChannel.accept();
@@ -168,10 +181,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         buffer.flip();
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
-        Packet packet = Utils.deserializePacket(data);
-        logger.info(String.format("Received packet from %s: %s", clientChannel.getRemoteAddress(), packet));
-        notifyListeners(packet, logger);
-        return packet;
+        return Utils.deserializePacket(data);
     }
 
     /**
@@ -207,7 +217,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
     public void send(SocketChannel client, Packet packet) throws IOException {
         if(client == null) return;
         if(client.isOpen() && client.isConnected())
-            client.write(ByteBuffer.wrap(Utils.serializePacket(packet)));
+            client.write(ByteBuffer.wrap(packet.serialize()));
     }
 
     /**
@@ -230,7 +240,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @param message the message to broadcast.
      */
     public void broadcastMessage(String message) {
-        this.sendToAll(new Packet(PacketType.MESSAGE, "message-chat", message));
+        this.sendToAll(new MSGPacket(message));
     }
 
     /**
@@ -264,6 +274,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
             this.selector.close();
             this.serverChannel.close();
             this.dbConn.close();
+            this.closeObservers();
         }
     }
 

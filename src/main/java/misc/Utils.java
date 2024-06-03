@@ -1,15 +1,10 @@
 package misc;
 
-import hive.packets.Packet;
-import hive.packets.PacketType;
+import hive.packets.*;
 
-import java.io.IOException;
+import java.util.Arrays;
 
 public class Utils {
-    public static byte[] serializePacket(Packet packet) throws IOException {
-        return (packet.getType() + "|" + packet.getTable() + "|" + packet.getData()).getBytes();
-    }
-
     public static Packet deserializePacket(byte[] data) {
         // Implement your deserialization logic here
         // For simplicity, assuming the data is serialized using a specific format
@@ -17,8 +12,29 @@ public class Utils {
         // For example, using a simple custom format: "CREATE|SomeData"
         String[] parts = new String(data).split("\\|");
         PacketType type = PacketType.valueOf(parts[0]);
-        String table = parts[1];
-        String packetData = parts[2];
-        return new Packet(type, table, packetData);
+        switch (type) {
+            case MESSAGE:
+                return new MSGPacket(parts[1]);
+            case SQL:
+                DBPacket packet = new DBPacket(parts[2], SQLCommandType.valueOf(parts[1]));
+                boolean hasColumns = parts[3].equals("{}");
+
+                if (!hasColumns) {
+                    String[] columns = parts[3].split(",");
+                    for (String column : columns) {
+                        String[] keyValue = column.split("=");
+                        packet.addColumn(keyValue[0], keyValue[1]);
+                    }
+                }
+
+                if (parts.length > 4) {
+                    packet.setCondition(parts[4]);
+                }
+
+                return packet;
+            default:
+                throw new IllegalArgumentException("Invalid packet type: " + type);
+        }
+
     }
 }

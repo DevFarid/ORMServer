@@ -1,7 +1,6 @@
 package hive.database;
 
 import com.j256.ormlite.support.ConnectionSource;
-import com.j256.ormlite.table.DatabaseTable;
 import hive.packets.Packet;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
