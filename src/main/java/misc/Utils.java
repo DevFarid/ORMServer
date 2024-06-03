@@ -17,7 +17,7 @@ public class Utils {
                 return new MSGPacket(parts[1]);
             case SQL:
                 DBPacket packet = new DBPacket(parts[2], SQLCommandType.valueOf(parts[1]));
-                boolean hasColumns = parts[3].equals("{}");
+                boolean hasColumns = parts[3].isEmpty();
 
                 if (!hasColumns) {
                     String[] columns = parts[3].split(",");
