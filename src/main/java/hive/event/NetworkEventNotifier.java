@@ -26,6 +26,13 @@ public abstract class NetworkEventNotifier {
     }
 
     /**
+     * Closes the notifier and removes all listeners.
+     */
+    public void closeObservers() {
+        this.listeners.clear();
+    }
+
+    /**
      * Notifies all listeners of a new message.
      * This fires the {@code onMessageReceived} event for all listeners.
      * @param packet the received packet.

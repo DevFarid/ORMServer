@@ -1,8 +1,6 @@
 package hive;
-import hive.packets.Packet;
+import hive.packets.*;
 import org.junit.jupiter.api.*;
-
-import hive.packets.PacketType;
 
 
 import java.io.IOException;
@@ -96,7 +94,7 @@ public class ServerTests {
         executor.close();
     }
     
-    //Test server receiving multiple client connections\
+    //Test server receiving multiple client connections
     @Test
     @Order(5)
     @DisplayName("test server receives multiple client connections.")
@@ -115,7 +113,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-5.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -125,7 +123,7 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-5.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -145,7 +143,7 @@ public class ServerTests {
         final Server server = new Server(8085);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
-        final CountDownLatch latch = new CountDownLatch(3);
+        final CountDownLatch latch = new CountDownLatch(4);
         final ExecutorService executor = Executors.newFixedThreadPool(3);
         String packetMessage = String.format("%s Hello World %s", Math.random() * 100, Math.random() * 100);
 
@@ -157,7 +155,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-6.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -167,7 +165,7 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-6.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -176,15 +174,15 @@ public class ServerTests {
         final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
 
         clientRef1.get().addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    packetMessage.equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if (packetMessage.equals(msgPacket.getMessage())) {
                 messageReceivedClient1.set(true);
             }
         });
 
         clientRef2.get().addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    packetMessage.equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if (packetMessage.equals(msgPacket.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
@@ -216,7 +214,7 @@ public class ServerTests {
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
 
-        final CountDownLatch latch = new CountDownLatch(2);
+        final CountDownLatch latch = new CountDownLatch(4);
         final ExecutorService executor = Executors.newFixedThreadPool(3);
 
 
@@ -231,7 +229,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-7.", e);
             }
         });
 
@@ -240,25 +238,24 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-7.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         server.addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    "Hello Server from Client 1".equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if ("Hello Server from Client 1".equals(msgPacket.getMessage())) {
                 messageReceivedClient1.set(true);
-            } else if(event.getPacket().getType() == PacketType.MESSAGE &&
-                    "Hello Server from Client 2".equals(event.getPacket().getData())) {
+            } else if("Hello Server from Client 2".equals(msgPacket.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        clientRef1.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 1"));
-        clientRef2.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 2"));
+        clientRef1.get().sendPacket(new MSGPacket("Hello Server from Client 1"));
+        clientRef2.get().sendPacket(new MSGPacket("Hello Server from Client 2"));
 
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -269,6 +266,71 @@ public class ServerTests {
 
         clientRef1.get().stop();
         clientRef2.get().stop();
+        server.close();
+        executor.close();
+    }
+
+    // test server receiving a DBPacket from a single client
+    @Test
+    @Order(8)
+    @DisplayName("test server receiving a DBPacket from a connected client.")
+    public void testDBPacket() throws Exception {
+        final Server server = new Server(8087);
+        final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(4);
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
+
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        executor.submit(() -> {
+            clientRef.set(new HiveClient("localhost", 8087));
+            try {
+                clientRef.get().start();
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Error starting client in test-8.", e);
+            }
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        final AtomicBoolean packetReceived = new AtomicBoolean(false);
+        server.addNetworkEventListener(event -> {
+            DBPacket dbPacket = (DBPacket) event.getPacket();
+            if (dbPacket.getCommandType() == SQLCommandType.SELECT) {
+
+                if(dbPacket.getTableName().equalsIgnoreCase("users")) {
+
+                    if(dbPacket.getColumns().containsKey("id")) {
+
+                        if(dbPacket.getColumns().containsKey("first_name")) {
+
+                            if(dbPacket.getCondition().equalsIgnoreCase("WHERE last_name = DOE")) {
+
+                                if(dbPacket.getColumns().get("id").equals("1")) {
+
+                                    if(dbPacket.getColumns().get("first_name").equals("JOHN")) {
+
+                                        packetReceived.set(true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        DBPacket packet = new DBPacket("users", SQLCommandType.SELECT);
+        packet.addColumn("id", "1");
+        packet.addColumn("first_name", "JOHN");
+        packet.setCondition("WHERE last_name = DOE");
+        clientRef.get().sendPacket(packet);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        Assertions.assertTrue(packetReceived.get(), "Server did not receive the expected DBPacket from the client.");
+
+        clientRef.get().stop();
         server.close();
         executor.close();
     }
