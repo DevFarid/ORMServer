@@ -2,10 +2,6 @@ package hive.database;
 
 import com.j256.ormlite.support.ConnectionSource;
 import hive.packets.Packet;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
-
-import java.util.Set;
 
 /**
  * This class will manage entities within the database in a CRUD manner.
@@ -29,11 +25,5 @@ public class AppRepository {
     }
 
     public static void main(String[] args) {
-        Reflections reflections = new Reflections();
-        Set<String> annotatedClasses = reflections.getAll(Scanners.SubTypes);
-
-        for (String s : annotatedClasses) {
-            System.out.println("Processed DAO for: " + s);
-        }
     }
 }
