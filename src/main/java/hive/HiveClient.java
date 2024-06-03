@@ -1,8 +1,8 @@
 package hive;
 
 import hive.event.NetworkEventNotifier;
+import hive.packets.MSGPacket;
 import hive.packets.Packet;
-import hive.packets.PacketType;
 import misc.Utils;
 
 import java.io.IOException;
@@ -56,7 +56,7 @@ public class HiveClient extends NetworkEventNotifier {
                     }
                     break;
                 }
-                sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", message));
+                sendPacket(new MSGPacket(message));
             }
             scanner.close();
         });
@@ -93,7 +93,7 @@ public class HiveClient extends NetworkEventNotifier {
                         channel.register(this.selector, SelectionKey.OP_READ);
                         logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
-                        sendPacket(new Packet(PacketType.MESSAGE, "message-chat", "New client connected."));
+                        sendPacket(new MSGPacket("New client connected."));
                     } else if(key.isReadable()) {
                         Packet packet = this.read();
                         if (packet != null) {
@@ -112,8 +112,7 @@ public class HiveClient extends NetworkEventNotifier {
     // method to send message to server
     public void sendPacket(Packet p) {
         try {
-            byte[] serializedPacket = Utils.serializePacket(p);
-            ByteBuffer buffer = ByteBuffer.wrap(serializedPacket);
+            ByteBuffer buffer = ByteBuffer.wrap(p.serialize());
 
             while (buffer.hasRemaining()) {
                 clientChannel.write(buffer);

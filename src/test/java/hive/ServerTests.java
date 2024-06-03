@@ -1,4 +1,5 @@
 package hive;
+import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import org.junit.jupiter.api.*;
 
@@ -115,7 +116,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-5.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -125,7 +126,7 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-5.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -157,7 +158,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-6.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -167,7 +168,7 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-6.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -176,15 +177,15 @@ public class ServerTests {
         final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
 
         clientRef1.get().addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    packetMessage.equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if (packetMessage.equals(msgPacket.getMessage())) {
                 messageReceivedClient1.set(true);
             }
         });
 
         clientRef2.get().addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    packetMessage.equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if (packetMessage.equals(msgPacket.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
@@ -231,7 +232,7 @@ public class ServerTests {
             try {
                 clientRef1.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 1 in test-7.", e);
             }
         });
 
@@ -240,25 +241,24 @@ public class ServerTests {
             try {
                 clientRef2.get().start();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error starting client 2 in test-7.", e);
             }
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         server.addNetworkEventListener(event -> {
-            if (event.getPacket().getType() == PacketType.MESSAGE &&
-                    "Hello Server from Client 1".equals(event.getPacket().getData())) {
+            MSGPacket msgPacket = (MSGPacket) event.getPacket();
+            if ("Hello Server from Client 1".equals(msgPacket.getMessage())) {
                 messageReceivedClient1.set(true);
-            } else if(event.getPacket().getType() == PacketType.MESSAGE &&
-                    "Hello Server from Client 2".equals(event.getPacket().getData())) {
+            } else if("Hello Server from Client 2".equals(msgPacket.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        clientRef1.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 1"));
-        clientRef2.get().sendPacket(new Packet(PacketType.MESSAGE, "chat-channel", "Hello Server from Client 2"));
+        clientRef1.get().sendPacket(new MSGPacket("Hello Server from Client 1"));
+        clientRef2.get().sendPacket(new MSGPacket("Hello Server from Client 2"));
 
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
