@@ -106,7 +106,7 @@ public abstract class Console extends NetworkEventNotifier {
         this.consoleCmd.add(command);
     }
 
-    public void addCommands(ConsoleCommand... commands) {
+    public void addCommands(List<ConsoleCommand> commands) {
         for (ConsoleCommand command : commands) {
             addCommand(command);
         }

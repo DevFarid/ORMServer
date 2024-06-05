@@ -1,5 +1,7 @@
 package hive.commands;
 
+import hive.console.Console;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,8 +15,10 @@ public abstract class ConsoleCommand {
     private final String commandName;
     private Runnable runnableAction;
     private final List<String> params = new ArrayList<>();
+    private final Console console;
 
-    public ConsoleCommand(String commandName) {
+    public ConsoleCommand(final Console console, String commandName) {
+        this.console = console;
         this.commandName = commandName;
         this.runnableAction = () -> {};
     }
@@ -33,6 +37,10 @@ public abstract class ConsoleCommand {
 
     public void setRunnableAction(Runnable runnableAction) throws IOException {
         this.runnableAction = runnableAction;
+    }
+
+    public Console getConsole() {
+        return this.console;
     }
 
     public void execute() {

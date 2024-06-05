@@ -1,5 +1,6 @@
 package hive;
 
+import hive.commands.CMDLoader;
 import hive.database.DBConnection;
 import hive.database.DBEnv;
 import hive.commands.ConsoleCommand;
@@ -30,39 +31,7 @@ public class Server extends Console implements AutoCloseable {
     public Server(DBEnv env, int port) throws IOException, SQLException {
         super(true, port);
         this.dbConn = new DBConnection(env);
-
-        ConsoleCommand clientList = new ConsoleCommand("clients") {
-            @Override
-            public boolean requiresParams() {
-                return false;
-            }
-        };
-        clientList.setRunnableAction(() -> {
-            getLogger().info("Connected clients:");
-            getConnectedClients().forEach(client -> {
-                try {
-                    getLogger().info(client.getRemoteAddress().toString());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        });
-
-        ConsoleCommand broadcastCmd = new ConsoleCommand("broadcast") {
-            @Override
-            public boolean requiresParams() {
-                return true;
-            }
-        };
-        broadcastCmd.setRunnableAction(() -> {
-            if(broadcastCmd.getParams().isEmpty()) {
-                getLogger().info("No message to broadcast.");
-                return;
-            }
-            broadcastMessage(String.join(" ", broadcastCmd.getParams()));
-        });
-
-        addCommands(clientList, broadcastCmd);
+        addCommands(CMDLoader.SERVER.loadCommands(this));
     }
 
     /**

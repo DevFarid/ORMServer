@@ -1,5 +1,6 @@
 package hive;
 
+import hive.commands.CMDLoader;
 import hive.console.Console;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
@@ -20,6 +21,7 @@ public class HiveClient extends Console {
 
     public HiveClient(int port) throws IOException {
         super(false, port);
+        addCommands(CMDLoader.CLIENT.loadCommands(this));
     }
 
     /**
