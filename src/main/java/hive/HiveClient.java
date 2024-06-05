@@ -1,83 +1,38 @@
 package hive;
 
-import hive.event.NetworkEventNotifier;
+import hive.console.Console;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import misc.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.Iterator;
-import java.util.Scanner;
 
-public class HiveClient extends NetworkEventNotifier {
-    private final Logger logger = Logger.getLogger(HiveClient.class.getName());
-    private Selector selector;
-    private SocketChannel clientChannel;
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private Thread scannerThread = scannerThread();
+public class HiveClient extends Console {
 
-    public HiveClient(String host, int port) {
-        try {
-            this.selector = Selector.open();
-            this.clientChannel = SocketChannel.open();
-            this.clientChannel.configureBlocking(false);
-            this.clientChannel.connect(new InetSocketAddress(host, port));
-            this.clientChannel.register(selector, SelectionKey.OP_CONNECT);
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error creating client.", e);
-        }
-    }
-
-    /**
-     * Thread to read messages from the console and send them to the server.
-     */
-    private Thread scannerThread() {
-        return new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            while (true) {
-                if(!scanner.hasNextLine()) continue;
-                String message = scanner.nextLine();
-                if (message.isEmpty()) {
-                    continue;
-                }
-                if (message.equals("stop")) {
-                    try {
-                        stop();
-                    } catch (IOException e) {
-                        logger.log(Level.SEVERE, "Error stopping client.", e);
-                    }
-                    break;
-                }
-                sendPacket(new MSGPacket(message));
-            }
-            scanner.close();
-        });
+    public HiveClient(int port) throws IOException {
+        super(false, port);
     }
 
     /**
      * Starts the client and listens for messages from the server.
      */
-    public void start() throws IOException {
-        running.set(true);
+    public void start() {
+        getState().set(true);
 
         try {
-            scannerThread = scannerThread();
-            scannerThread.start();
-            while (running.get()) {
-                int selectedResult = this.selector.select();
+            startConsole();
+            while (getState().get()) {
+                int selectedResult = this.getSelector().select();
                 if (selectedResult == 0) {
                     continue;
                 }
 
-                Iterator<SelectionKey> keyIterator = this.selector.selectedKeys().iterator();
+                Iterator<SelectionKey> keyIterator = this.getSelector().selectedKeys().iterator();
                 while (keyIterator.hasNext()) {
                     SelectionKey key = keyIterator.next();
                     keyIterator.remove();
@@ -90,20 +45,20 @@ public class HiveClient extends NetworkEventNotifier {
                         }
 
                         // Register
-                        channel.register(this.selector, SelectionKey.OP_READ);
-                        logger.info(String.format("Connected to server %s", channel.getRemoteAddress()));
+                        channel.register(getSelector(), SelectionKey.OP_READ);
+                        getLogger().info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
                         sendPacket(new MSGPacket("New client connected."));
                     } else if(key.isReadable()) {
                         Packet packet = this.read();
                         if (packet != null) {
-                            notifyListeners(packet, logger);
+                            notifyListeners(packet, getLogger());
                         }
                     }
                 }
             }
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error starting client.", e);
+            getLogger().log(Level.SEVERE, "Error starting client.", e);
         } finally {
             stop();
         }
@@ -115,19 +70,19 @@ public class HiveClient extends NetworkEventNotifier {
             ByteBuffer buffer = ByteBuffer.wrap(p.serialize());
 
             while (buffer.hasRemaining()) {
-                clientChannel.write(buffer);
+                ((SocketChannel) getChannel()).write(buffer);
             }
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "error sending a packet!", e);
+            getLogger().log(Level.SEVERE, "error sending a packet!", e);
         }
     }
 
     protected Packet read() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int read = this.clientChannel.read(buffer);
+        int read = ((SocketChannel) this.getChannel()).read(buffer);
         if (read == -1) {
-            logger.info("Server has closed the connection.");
-            this.clientChannel.close();
+            getLogger().info("Server has closed the connection.");
+            this.getChannel().close();
             return null;
         }
 
@@ -135,40 +90,31 @@ public class HiveClient extends NetworkEventNotifier {
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
         Packet packet = Utils.deserializePacket(data);
-        logger.info(String.format("Received packet from server: %s", packet));
+        getLogger().info(String.format("Received packet from server: %s", packet));
 
         return packet;
     }
 
     /**
-     * Gets the current client channel.
-     * 
-     * @return the {@code SocketChannel} channel of this client.
-     */
-    public SocketChannel getChannel() {
-        return this.clientChannel;
-    }
-
-    /**
      * Stops the client.
-     * 
-     * @throws IOException any errors causing a shutdown failure.
      */
-    public void stop() throws IOException {
-        running.set(false);
-        scannerThread.interrupt();
-        this.selector.close();
-        this.clientChannel.close();
-        this.clearObservers();
+    @Override
+    public void stop() {
+        try {
+            if (getState().get()) {
+                getState().set(false);
+                stopConsole();
+                this.getSelector().close();
+                this.getChannel().close();
+                this.clearObservers();
+            }
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "Error stopping client.", e);
+        }
     }
 
-    public static void main(String[] args) {
-        HiveClient client = new HiveClient("localhost", 25565);
-        try {
-            client.start();
-        } catch (IOException e) {
-            System.out.printf(
-                    "Error starting client.\nCause: %s\nTrace: %s\n", e.getCause(), e.fillInStackTrace());
-        }
+    public static void main(String[] args) throws IOException {
+        HiveClient client = new HiveClient(25565);
+        client.start();
     }
 }

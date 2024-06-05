@@ -2,7 +2,10 @@ package misc;
 
 import hive.packets.*;
 
+import java.io.IOException;
+import java.nio.channels.SocketChannel;
 import java.util.Arrays;
+import java.util.List;
 
 public class Utils {
     public static Packet deserializePacket(byte[] data) {
@@ -36,5 +39,19 @@ public class Utils {
                 throw new IllegalArgumentException("Invalid packet type: " + type);
         }
 
+    }
+
+    public static String prettyPrintClients(List<SocketChannel> clients) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        int i = 0;
+        for (SocketChannel client : clients) {
+            sb.append(client.getRemoteAddress());
+            if(i < clients.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 }
