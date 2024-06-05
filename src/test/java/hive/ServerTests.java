@@ -37,8 +37,16 @@ public class ServerTests {
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
         final Server server = new Server(8081);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final CountDownLatch latch = new CountDownLatch(1);
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
         server.close();
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
         Assertions.assertFalse(server.isOpen());
+        executor.close();
     }
 
     // Test server is in operation mode.
@@ -79,12 +87,12 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
     
         executor.submit(() -> {
-            clientRef.set(new HiveClient("localhost", 8083));
             try {
-                clientRef.get().start();
+                clientRef.set(new HiveClient(8083));
             } catch (IOException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
+            clientRef.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
@@ -109,22 +117,22 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         executor.submit(() -> {
-            clientRef1.set(new HiveClient("localhost", 8084));
             try {
-                clientRef1.get().start();
+                clientRef1.set(new HiveClient( 8084));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 1 in test-5.", e);
+                throw new RuntimeException(e);
             }
+            clientRef1.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
         executor.submit(() -> {
-            clientRef2.set(new HiveClient("localhost", 8084));
             try {
-                clientRef2.get().start();
+                clientRef2.set(new HiveClient(8084));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 2 in test-5.", e);
+                throw new RuntimeException(e);
             }
+            clientRef2.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         
@@ -151,22 +159,22 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
-            clientRef1.set(new HiveClient("localhost", 8085));
             try {
-                clientRef1.get().start();
+                clientRef1.set(new HiveClient(8085));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 1 in test-6.", e);
+                throw new RuntimeException(e);
             }
+            clientRef1.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
-            clientRef2.set(new HiveClient("localhost", 8085));
             try {
-                clientRef2.get().start();
+                clientRef2.set(new HiveClient(8085));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 2 in test-6.", e);
+                throw new RuntimeException(e);
             }
+            clientRef2.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
@@ -225,21 +233,21 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
-            clientRef1.set(new HiveClient("localhost", 8086));
             try {
-                clientRef1.get().start();
+                clientRef1.set(new HiveClient(8086));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 1 in test-7.", e);
+                throw new RuntimeException(e);
             }
+            clientRef1.get().start();
         });
 
         executor.submit(() -> {
-            clientRef2.set(new HiveClient("localhost", 8086));
             try {
-                clientRef2.get().start();
+                clientRef2.set(new HiveClient(8086));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client 2 in test-7.", e);
+                throw new RuntimeException(e);
             }
+            clientRef2.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
@@ -284,12 +292,12 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         executor.submit(() -> {
-            clientRef.set(new HiveClient("localhost", 8087));
             try {
-                clientRef.get().start();
+                clientRef.set(new HiveClient( 8087));
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error starting client in test-8.", e);
+                throw new RuntimeException(e);
             }
+            clientRef.get().start();
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
