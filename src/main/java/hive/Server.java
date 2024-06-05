@@ -3,13 +3,13 @@ package hive;
 import hive.database.DBConnection;
 import hive.database.DBEnv;
 import hive.event.NetworkEventNotifier;
+import hive.commands.ConsoleCommand;
+import hive.console.Console;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
-import hive.packets.PacketType;
 import misc.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.sql.SQLException;
@@ -18,95 +18,75 @@ import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.*;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A java NIO server. Handles multiple clients using multiple threads.
  * The server can be stopped by typing "stop" in the console.
  * Created by SixEyes on 2024-04-07.
  */
-public class Server extends NetworkEventNotifier implements AutoCloseable {
-    private final Logger logger = Logger.getLogger(Server.class.getName());
-    private final ServerSocketChannel serverChannel;
-    private final Selector selector;
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private final Set<SocketChannel> connectedClients = new HashSet<>();
-    private final DBConnection dbConn;
+public class Server extends Console implements AutoCloseable {
 
-    public Server(DBEnv env, int port) throws IOException, SQLException {
-        logger.info(String.format("Opening a socket on port %d", port));
-        // Open selector and server channel
-        this.selector = Selector.open();
-        this.serverChannel = ServerSocketChannel.open();
-        this.serverChannel.configureBlocking(false);
-        this.serverChannel.socket().bind(new InetSocketAddress(port));
-        this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-        this.dbConn = new DBConnection(env);
-    }
+    private final List<SocketChannel> connectedClients = new ArrayList<>();
 
-    /**
-     * Scanner thread to stop the server from user I/O input.
-     * @return a thread that listens for {@code Scanner} user input to stop the server.
-     */
-    private Thread scannerThread() {
-        return new Thread(() -> {
-            try (Scanner scanner = new Scanner(System.in)) {
-                while (true) {
-                    if(scanner.hasNextLine()) {
-                        String message = scanner.nextLine().trim();
-                        if(message.equalsIgnoreCase("stop")) {
-                            try {
-                                stop();
-                            } catch (IOException e) {
-                                logger.log(Level.SEVERE, "Error stopping server.", e);
-                            }
-                            break;
-                        } else if(message.equalsIgnoreCase("clients")) {
-                            Set<SocketChannel> clients = getConnectedClients();
-                            StringBuilder strBuilder = new StringBuilder();
-                            if(!clients.isEmpty()) {
-                                clients.forEach(client -> {
-                                    try {
-                                        if(client.isOpen() && client.isConnected())
-                                            strBuilder.append(client.getRemoteAddress()).append("\n");
-                                    } catch (IOException e) {
-                                        logger.log(Level.SEVERE, "Error retrieve the connected client list.", e);
-                                    }
-                                });
-                                logger.info(String.format("Connected clients: \n%s", strBuilder));
-                            }
-                        } else if(message.equalsIgnoreCase("db")) {
-                            logger.info("Database connection: " + this.dbConn.getConnectionSource());
-                        }
-                    }
-                }
+    public Server(int port) throws IOException {
+        super(true, port);
+
+        ConsoleCommand clientList = new ConsoleCommand("clients") {
+            @Override
+            public boolean requiresParams() {
+                return false;
             }
+        };
+        clientList.setRunnableAction(() -> {
+            getLogger().info("Connected clients:");
+            getConnectedClients().forEach(client -> {
+                try {
+                    getLogger().info(client.getRemoteAddress().toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         });
-    }
 
+        ConsoleCommand broadcastCmd = new ConsoleCommand("broadcast") {
+            @Override
+            public boolean requiresParams() {
+                return true;
+            }
+        };
+        broadcastCmd.setRunnableAction(() -> {
+            if(broadcastCmd.getParams().isEmpty()) {
+                getLogger().info("No message to broadcast.");
+                return;
+            }
+            broadcastMessage(String.join(" ", broadcastCmd.getParams()));
+        });
+
+        addCommands(clientList, broadcastCmd);
+    }
 
     /**
      * Starts the server.
      * Starts a scanner thread that will listen for user commands.
      * This method will handle new connections and read data from clients.
      */
+    @Override
     public void start() {
         // Start the server if it is not running.
-        if(!running.get()) {
-            logger.info("Now accepting operations from clients.");
-            running.set(true);
+        if(!getState().get()) {
+            getLogger().info("Now accepting operations from clients.");
+            getState().set(true);
+            startConsole();
 
-            // register scanner thread
-            scannerThread().start();
-
-            while (running.get()) {
+            while (getState().get()) {
                 try {
                     // A channel is ready.
-                    int selectedResult = this.selector.select();
+                    int selectedResult = this.getSelector().select();
                     if(selectedResult == 0) { continue; }
 
-                    Set<SelectionKey> selectedKey = selector.selectedKeys();
+                    Set<SelectionKey> selectedKey = getSelector().selectedKeys();
                     Iterator<SelectionKey> keyIterator = selectedKey.iterator();
 
                     while(keyIterator.hasNext()) {
@@ -128,16 +108,16 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
                                 switch (receivedPacket.getType()) {
                                     case MESSAGE -> {
                                         MSGPacket msgPacket = (MSGPacket) receivedPacket;
-                                        logger.info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
+                                        getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
                                     }
-                                    case SQL -> logger.info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                    case SQL -> getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
                                 }
-                                notifyListeners(receivedPacket, logger);
+                                notifyListeners(receivedPacket, getLogger());
                             }
                         }
                     }
                 } catch (IOException e) {
-                    logger.log(Level.SEVERE, "Error selecting.", e);
+                    getLogger().log(Level.SEVERE, "Error selecting.", e);
                 }
 
             }
@@ -154,9 +134,9 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel clientChannel = serverChannel.accept();
         clientChannel.configureBlocking(false);
-        clientChannel.register(selector, SelectionKey.OP_READ);
-        connectedClients.add(clientChannel);
-        logger.info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
+        clientChannel.register(getSelector(), SelectionKey.OP_READ);
+        this.connectedClients.add(clientChannel);
+        getLogger().info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
     }
 
     /**
@@ -171,8 +151,8 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
         int read = clientChannel.read(buffer);
 
         if(read == -1) {
-            logger.info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
-            connectedClients.remove(clientChannel);
+            getLogger().info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
+            this.connectedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
             return null;
@@ -191,7 +171,7 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @return {@code true} if the server is running, {@code false} otherwise.
      */
     public boolean isRunning() {
-        return ( this.serverChannel.isOpen() && this.selector.isOpen() ) && running.get();
+        return ( this.getChannel().isOpen() && this.getSelector().isOpen() ) && getState().get();
     }
 
     /**
@@ -200,14 +180,8 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @return {@code true} if the server is reachable via internet, {@code false} otherwise.
      */
     public boolean isOpen() {
-        return this.serverChannel.isOpen() && this.selector.isOpen();
+        return this.getChannel().isOpen() && this.getSelector().isOpen();
     }
-
-    public Set<SocketChannel> getConnectedClients() {
-        return this.connectedClients;
-    }
-
-
     /**
      * Send a packet to a client.
      * @param client the client to send the packet to.
@@ -225,11 +199,11 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      * @param packet the packet to send.
      */
     public void sendToAll(Packet packet) {
-        connectedClients.forEach(client -> {
+        this.connectedClients.forEach(client -> {
             try {
                 send(client, packet);
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error sending packet to client.", e);
+                getLogger().log(Level.SEVERE, "Error sending packet to client.", e);
             }
         });
     }
@@ -241,6 +215,39 @@ public class Server extends NetworkEventNotifier implements AutoCloseable {
      */
     public void broadcastMessage(String message) {
         this.sendToAll(new MSGPacket(message));
+        getLogger().info(String.format("Broadcasting: %s", message));
+    }
+
+    /**
+     * Get a list of connected clients.
+     * @return a list of connected clients.
+     */
+    public List<SocketChannel> getConnectedClients() {
+        return this.connectedClients;
+    }
+
+    /**
+     * Stops the server.
+     */
+    @Override
+    public void stop() {
+        try {
+            if(getState().get()) {
+                getState().set(false);
+                this.getSelector().wakeup();
+                this.getSelector().close();
+                this.getChannel().close();
+                this.closeObservers();
+                stopConsole();
+            }
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "Error stopping server.", e);
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        stop();
     }
 
     /**
