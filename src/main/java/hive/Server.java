@@ -2,7 +2,6 @@ package hive;
 
 import hive.database.DBConnection;
 import hive.database.DBEnv;
-import hive.event.NetworkEventNotifier;
 import hive.commands.ConsoleCommand;
 import hive.console.Console;
 import hive.packets.MSGPacket;
@@ -13,11 +12,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -29,9 +25,11 @@ import java.util.logging.Level;
 public class Server extends Console implements AutoCloseable {
 
     private final List<SocketChannel> connectedClients = new ArrayList<>();
+    private final DBConnection dbConn;
 
-    public Server(int port) throws IOException {
+    public Server(DBEnv env, int port) throws IOException, SQLException {
         super(true, port);
+        this.dbConn = new DBConnection(env);
 
         ConsoleCommand clientList = new ConsoleCommand("clients") {
             @Override
@@ -227,6 +225,26 @@ public class Server extends Console implements AutoCloseable {
     }
 
     /**
+     * Checks if the server can interact with data (i.e. crud operations on the database).
+     * To interact with data, the server must be open, running, and the database connection must be open.
+     * @return true if the satisfactory conditions are met, false otherwise.
+     */
+    public boolean canInteractWithData() {
+        boolean[] canInteract = {
+                this.isOpen(),
+                this.isRunning(),
+                this.dbConn.getConnectionSource() != null,
+                this.dbConn.getConnectionSource().isOpen(this.dbConn.getEnv().getDatabaseUrl())
+        };
+
+        for(boolean can : canInteract) {
+            if(!can) return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Stops the server.
      */
     @Override
@@ -249,47 +267,6 @@ public class Server extends Console implements AutoCloseable {
     public void close() throws Exception {
         stop();
     }
-
-    /**
-     * Checks if the server can interact with data (i.e. crud operations on the database).
-     * To interact with data, the server must be open, running, and the database connection must be open.
-     * @return true if the satisfactory conditions are met, false otherwise.
-     */
-    public boolean canInteractWithData() {
-        boolean[] canInteract = {
-                this.isOpen(),
-                this.isRunning(),
-                this.dbConn.getConnectionSource() != null,
-                this.dbConn.getConnectionSource().isOpen(this.dbConn.getEnv().getDatabaseUrl())
-        };
-
-        for(boolean can : canInteract) {
-            if(!can) return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Stops the server.
-     * @throws IOException if an I/O error occurs.
-     */
-    public void stop() throws IOException {
-        if(running.get()) {
-            running.set(false);
-            this.selector.wakeup();
-            this.selector.close();
-            this.serverChannel.close();
-            this.dbConn.close();
-            this.closeObservers();
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-        stop();
-    }
-
 
     public static void main(String[] args) throws Exception {
         try(Server server = new Server(DBEnv.DEV, 25565)) {

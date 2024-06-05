@@ -3,6 +3,10 @@ package hive.packets;
 import java.io.Serial;
 import java.io.Serializable;
 
+/**
+ * Packet class is an abstract class that represents a packet that is sent between the server and the client.
+ * Created by SixEyes on 04/07/2024.
+ */
 public abstract class Packet implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
