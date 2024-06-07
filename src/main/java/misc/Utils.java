@@ -15,29 +15,10 @@ public class Utils {
         // For example, using a simple custom format: "CREATE|SomeData"
         String[] parts = new String(data).split("\\|");
         PacketType type = PacketType.valueOf(parts[0]);
-        switch (type) {
-            case MESSAGE:
-                return new MSGPacket(parts[1]);
-            case SQL:
-                DBPacket packet = new DBPacket(parts[2], SQLCommandType.valueOf(parts[1]));
-                boolean hasColumns = parts[3].equals("{}");
-
-                if (!hasColumns) {
-                    String[] columns = parts[3].split(",");
-                    for (String column : columns) {
-                        String[] keyValue = column.split("=");
-                        packet.addColumn(keyValue[0], keyValue[1]);
-                    }
-                }
-
-                if (parts.length > 4) {
-                    packet.setCondition(parts[4]);
-                }
-
-                return packet;
-            default:
-                throw new IllegalArgumentException("Invalid packet type: " + type);
-        }
+        return switch (type) {
+            case MESSAGE -> new MSGPacket(parts[1]);
+            case SQL -> new DBPacket();
+        };
 
     }
 

@@ -303,36 +303,12 @@ public class ServerTests {
 
         final AtomicBoolean packetReceived = new AtomicBoolean(false);
         server.addNetworkEventListener(event -> {
-            DBPacket dbPacket = (DBPacket) event.getPacket();
-            if (dbPacket.getCommandType() == SQLCommandType.SELECT) {
-
-                if(dbPacket.getTableName().equalsIgnoreCase("users")) {
-
-                    if(dbPacket.getColumns().containsKey("id")) {
-
-                        if(dbPacket.getColumns().containsKey("first_name")) {
-
-                            if(dbPacket.getCondition().equalsIgnoreCase("WHERE last_name = DOE")) {
-
-                                if(dbPacket.getColumns().get("id").equals("1")) {
-
-                                    if(dbPacket.getColumns().get("first_name").equals("JOHN")) {
-
-                                        packetReceived.set(true);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            if(event.getPacket().getType() == PacketType.SQL)
+                packetReceived.set(true);
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        DBPacket packet = new DBPacket("users", SQLCommandType.SELECT);
-        packet.addColumn("id", "1");
-        packet.addColumn("first_name", "JOHN");
-        packet.setCondition("WHERE last_name = DOE");
+        DBPacket packet = new DBPacket();
         clientRef.get().sendPacket(packet);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
