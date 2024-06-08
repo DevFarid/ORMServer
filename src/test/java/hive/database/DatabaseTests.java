@@ -23,7 +23,7 @@ public class DatabaseTests {
     public void testServerDatabaseOpen() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            try(Server server = new Server(DBEnv.DEV,8080)) {
+            try(Server server = new Server(DBEnv.DEV,7070)) {
                 executor.submit(server::start);
                 latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
                 Assertions.assertTrue(server.canInteractWithData());
@@ -38,7 +38,7 @@ public class DatabaseTests {
     public void testServerDatabaseClosed() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
-        Server server = new Server(DBEnv.DEV,8080);
+        Server server = new Server(DBEnv.DEV,7171);
 
         executor.submit(server::start);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
