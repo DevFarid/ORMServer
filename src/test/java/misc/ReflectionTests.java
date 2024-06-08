@@ -1,10 +1,14 @@
 package misc;
 
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
 import org.junit.jupiter.api.*;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.net.MalformedURLException;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -121,6 +125,39 @@ import java.util.logging.Logger;
 
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error loading class.", e);
+        }
+    }
+
+    // test class and its fields are annotated
+    @Test
+    @Order(6)
+    @DisplayName("test annotated types & primary key.")
+    public void testClassAndFieldsAnnotated() {
+        String className = "ReflectionTestClass";
+        File file = new File(String.format("src/test/java/misc/reflect/%s.java", className));
+        Assertions.assertNotNull(file);
+
+        try {
+            ReflectionUtil.compileJavaFiles(List.of(file));
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error compiling java files.", e);
+        }
+        Assertions.assertTrue(ReflectionUtil.wasCompiled(List.of(file)));
+
+        try {
+            List<Class<?>> loadedClasses = ReflectionUtil.loadClass(List.of(file));
+            Assertions.assertNotNull(loadedClasses);
+            Assertions.assertEquals(1, loadedClasses.size());
+
+            Class<?> loadedClass = loadedClasses.getFirst();
+            Field f = ReflectionUtil.fieldHasAnnotation(ReflectionUtil.getMemberFieldsFromClazz(loadedClass), DatabaseField.class);
+
+            Assertions.assertTrue(ReflectionUtil.classHasAnnotation(loadedClass, DatabaseTable.class));
+            Assertions.assertNotNull(f);
+            Assertions.assertTrue(ReflectionUtil.isFieldPrimaryKey(f));
+
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 }

@@ -1,5 +1,6 @@
 package misc;
 
+import com.j256.ormlite.field.DatabaseField;
 import org.slf4j.LoggerFactory;
 
 import javax.tools.JavaCompiler;
@@ -8,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -67,6 +69,43 @@ public class ReflectionUtil {
             fileNames.add(javaFile.getPath());
         }
         compiler.run(null,null,null, fileNames.toArray(new String[0]));
+    }
+
+    /**
+     * Checks if a java-class type is annotated with a specific annotation class.
+     * @param clazz the class to check if it has the desired annotation.
+     * @param annotationClazz the annotation class to check for.
+     * @return true if the class has the annotation, false otherwise.
+     */
+    public static boolean classHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClazz) {
+        return clazz.isAnnotationPresent(annotationClazz);
+    }
+
+    /**
+     * Checks if a java-field is annotated with a specific annotation class.
+     * @param fields the fields to check if it has the desired annotation.
+     * @param annotationClazz the annotation class to check for.
+     * @return the field if it has the annotation, null otherwise.
+     */
+    public static Field fieldHasAnnotation(Field[] fields, Class<? extends Annotation> annotationClazz) {
+        for (Field field : fields) {
+            if (field.isAnnotationPresent(annotationClazz)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Checks if an {@code DatabaseField} annotated java-field is a primary key.
+     * @param field the field to check for primary key.
+     * @return true if the field is a primary key, false otherwise.
+     */
+    public static boolean isFieldPrimaryKey(Field field) {
+        if(field.isAnnotationPresent(DatabaseField.class)) {
+            return field.getAnnotation(DatabaseField.class).generatedId();
+        }
+        return false;
     }
 
     /**
