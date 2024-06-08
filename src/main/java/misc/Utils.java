@@ -4,7 +4,6 @@ import hive.packets.*;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.List;
 
 public class Utils {
@@ -53,5 +52,43 @@ public class Utils {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    private static void strParameterNotNull(String str) {
+        if (str == null) {
+            throw new IllegalArgumentException("Parameter cannot be null");
+        }
+    }
+
+    private static void strParameterNotEmpty(String str) {
+        if(str.isEmpty()) {
+            throw new IllegalArgumentException("Parameter cannot be empty");
+        }
+    }
+
+    private static void strArrayParameterNotEmpty(String[] strArray) {
+        if(strArray.length == 0) {
+            throw new IllegalArgumentException("Parameter array cannot be empty");
+        }
+        for(String str : strArray) {
+            strParameterNotNull(str);
+            strParameterNotEmpty(str);
+        }
+    }
+
+    private static void strArrayParameterNotNull(String[] strArray) {
+        if(strArray == null) {
+            throw new IllegalArgumentException("Parameter array cannot be null");
+        }
+    }
+
+    public static void strNNorNE(String str) {
+        strParameterNotNull(str);
+        strParameterNotEmpty(str);
+    }
+
+    public static void strArrayNNorNE(String[] strArray) {
+        strArrayParameterNotNull(strArray);
+        strArrayParameterNotEmpty(strArray);
     }
 }
