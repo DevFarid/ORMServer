@@ -9,8 +9,8 @@ import java.util.List;
  */
 public class WhereAttacher {
 
-    private List<Where> whereClauses = new ArrayList<>();
-    private List<ComparisonOp> clauseComparisons = new ArrayList<>();
+    private final List<Where> whereClauses = new ArrayList<>();
+    private final List<ComparisonOp> clauseComparisons = new ArrayList<>();
 
     public WhereAttacher() {}
 
@@ -30,13 +30,13 @@ public class WhereAttacher {
 
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder().append("(");
+        StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < whereClauses.size(); i++) {
             stringBuilder.append(whereClauses.get(i));
             if (i < whereClauses.size() - 1) {
                 stringBuilder.append(" ").append(clauseComparisons.get(i)).append(" ");
             }
         }
-        return stringBuilder.append(")").toString();
+        return stringBuilder.toString();
     }
 }

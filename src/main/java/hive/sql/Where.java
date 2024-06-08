@@ -23,9 +23,26 @@ public class Where {
         return this;
     }
 
+    public Where value(String... values) {
+        if(values.length > 0) {
+            StringBuilder sb = new StringBuilder("(");
+            for (int i = 0; i < values.length; i++) {
+                sb.append("'").append(values[i]).append("'");
+                if (i < values.length - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(")");
+            this.value = sb.toString();
+        }
+        return this;
+    }
+
     @Override
     public String toString() {
-        return String.format("%s %s %s", column, op.getSymbol(), value);
+        if(value != null)
+            return String.format("%s %s %s", column, op.getSymbol(), value);
+        else return String.format("%s %s", column, op.getSymbol());
     }
 
 }

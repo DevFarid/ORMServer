@@ -3,7 +3,6 @@ package misc;
 import hive.sql.ComparisonOp;
 import hive.sql.QueryBuilder;
 import hive.sql.Where;
-import hive.sql.WhereAttacher;
 import org.junit.jupiter.api.*;
 
 /**
@@ -17,11 +16,11 @@ public class QueryBuilderTests {
     @Order(1)
     @DisplayName("test-1: Select query w/o where clause")
     public void testSelect() {
-        String query = new QueryBuilder()
-                .select("name")
-                .from("users")
+        String query = QueryBuilder.builder()
+                .select("id")
+                .from("TestEntity")
                 .toString();
-        Assertions.assertEquals("SELECT name FROM users", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity;", query);
         System.out.println(query);
     }
 
@@ -29,21 +28,17 @@ public class QueryBuilderTests {
     @Order(2)
     @DisplayName("test-2: Select query w/ single where clause")
     public void testSelectWhere() {
-        String query = new QueryBuilder()
+        String query = QueryBuilder.builder()
                 .select("id")
                 .from("TestEntity")
                 .where(
-                        WhereAttacher.builder()
-                                .add(
-                                        new Where()
-                                                .column("name")
-                                                .op(ComparisonOp.EQUALS)
-                                                .value("John")
-                                        , null
-                                )
+                        new Where()
+                                .column("name")
+                                .op(ComparisonOp.EQUALS)
+                                .value("John")
                 )
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE (name = John)", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John;", query);
         System.out.println(query);
     }
 
@@ -51,21 +46,16 @@ public class QueryBuilderTests {
     @Order(3)
     @DisplayName("test-3: Select query w/ multi select statements & one where clause")
     public void testMultiSelectWhere() {
-        String query = new QueryBuilder()
+        String query = QueryBuilder.builder()
                 .select("id", "age")
                 .from("TestEntity")
-                .where(
-                        WhereAttacher.builder()
-                                .add(
-                                        new Where()
-                                                .column("name")
-                                                .op(ComparisonOp.EQUALS)
-                                                .value("John")
-                                        , null
-                                )
+                .where(new Where()
+                        .column("name")
+                        .op(ComparisonOp.EQUALS)
+                        .value("John")
                 )
                 .toString();
-        Assertions.assertEquals("SELECT id, age FROM TestEntity WHERE (name = John)", query);
+        Assertions.assertEquals("SELECT id, age FROM TestEntity WHERE name = John;", query);
         System.out.println(query);
     }
 
@@ -73,29 +63,85 @@ public class QueryBuilderTests {
     @Order(4)
     @DisplayName("test-4: Select query w/ two where clauses")
     public void testSelectWhereMoreFilter() {
-        String query = new QueryBuilder()
+        String query = QueryBuilder.builder()
                 .select("id")
                 .from("TestEntity")
-                .where(
-                        WhereAttacher.builder()
-                                .add(
-                                        new Where()
-                                                .column("name")
-                                                .op(ComparisonOp.EQUALS)
-                                                .value("John")
-                                        , ComparisonOp.AND
-                                )
-                                .add(
-                                        new Where()
-                                                .column("age")
-                                                .op(ComparisonOp.GREATER_THAN)
-                                                .value("18")
-                                        , null
-                                )
-                )
+                .where(new Where()
+                                .column("name")
+                                .op(ComparisonOp.EQUALS)
+                                .value("John")
+                        , ComparisonOp.AND)
+                .where(new Where()
+                                .column("age")
+                                .op(ComparisonOp.GREATER_THAN)
+                                .value("18")
+                        ,null)
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE (name = John AND age > 18)", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John AND age > 18;", query);
         System.out.println(query);
     }
 
+    @Test
+    @Order(5)
+    @DisplayName("test-5: Select query w/ two where clauses")
+    public void testSelectWhereConjugatedFilter() {
+        String query = QueryBuilder.builder()
+                .select("id")
+                .from("TestEntity")
+                .where(new Where()
+                                .column("name")
+                                .op(ComparisonOp.EQUALS)
+                                .value("John")
+                        , ComparisonOp.AND
+                )
+                .where(new Where()
+                                .column("age")
+                                .op(ComparisonOp.GREATER_THAN)
+                                .value("18")
+                        , ComparisonOp.OR)
+                .where(new Where()
+                                .column("salary")
+                                .op(ComparisonOp.GREATER_THAN)
+                                .value("10000")
+                        , null)
+                .toString();
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John AND age > 18 OR salary > 10000;", query);
+        System.out.println(query);
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("test-6: test where in clause")
+    public void testWhereIn() {
+        String query = QueryBuilder.builder()
+                        .select("name")
+                        .from("customers")
+                        .where(new Where()
+                                        .column("name")
+                                        .op(ComparisonOp.IN)
+                                        .value("Bob", "Fred", "Harry")
+                                , null
+                        )
+                .toString();
+        Assertions.assertEquals("SELECT name FROM customers WHERE name IN ('Bob', 'Fred', 'Harry');", query);
+        System.out.println(query);
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("test-7: test where is not null clause")
+    public void testWhereIsNotNull() {
+        String query = QueryBuilder.builder()
+                        .select("name")
+                        .from("customers")
+                                .where(
+                                        new Where()
+                                                .column("name")
+                                                .op(ComparisonOp.IS_NOT_NULL)
+
+                                )
+                .toString();
+        Assertions.assertEquals("SELECT name FROM customers WHERE name IS NOT NULL;", query);
+        System.out.println(query);
+    }
 }

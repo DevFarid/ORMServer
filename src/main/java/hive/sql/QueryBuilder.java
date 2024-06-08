@@ -11,7 +11,7 @@ public class QueryBuilder {
 
     String[] columns;
     String table;
-    WhereAttacher whereAttacher;
+    WhereAttacher whereAttacher = WhereAttacher.builder();
     SQLCommandType commandType;
 
     public QueryBuilder() {}
@@ -59,12 +59,20 @@ public class QueryBuilder {
         if (this.whereAttacher != null && this.whereAttacher.hasConditions()) {
             query.append(" WHERE ").append(this.whereAttacher);
         }
-        return query.toString();
+        return query.append(";").toString();
     }
 
-    public QueryBuilder where(WhereAttacher whereAttacher) {
-        this.whereAttacher = whereAttacher;
+    public QueryBuilder where(Where where) {
+        this.whereAttacher.add(where, null);
         return this;
     }
 
+    public QueryBuilder where(Where where, ComparisonOp conjugation) {
+        this.whereAttacher.add(where, conjugation);
+        return this;
+    }
+
+    public static QueryBuilder builder() {
+        return new QueryBuilder();
+    }
 }
