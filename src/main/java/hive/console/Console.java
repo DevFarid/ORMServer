@@ -1,6 +1,5 @@
 package hive.console;
 
-import hive.HiveClient;
 import hive.commands.ConsoleCommand;
 import hive.event.NetworkEventNotifier;
 
@@ -19,6 +18,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A console that listens for user input and executes commands.
+ * Created by SixEyes on 06/03/2024.
+ */
 public abstract class Console extends NetworkEventNotifier {
 
     private final Logger logger = Logger.getLogger(Console.class.getName());
@@ -103,7 +106,7 @@ public abstract class Console extends NetworkEventNotifier {
         this.consoleCmd.add(command);
     }
 
-    public void addCommands(ConsoleCommand... commands) {
+    public void addCommands(List<ConsoleCommand> commands) {
         for (ConsoleCommand command : commands) {
             addCommand(command);
         }

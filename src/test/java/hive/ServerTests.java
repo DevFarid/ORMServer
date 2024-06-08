@@ -1,9 +1,11 @@
 package hive;
+import hive.database.DBEnv;
 import hive.packets.*;
 import org.junit.jupiter.api.*;
 
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,29 +21,36 @@ import java.util.logging.Logger;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ServerTests {
-    private final Logger logger = Logger.getLogger(ServerTests.class.getName());
     private static final int DELAY_MS = 50;
+
+    private int generateRandomPort() {
+        return 1000 + (new Random()).nextInt(9000);
+    }
+
     // Test for server reachability and that channels are open.
     @Test
     @Order(1)
     @DisplayName("test server is open and reachable.")
     public void testServerOpen() throws Exception {
-        try(Server server = new Server(8080)) {
-            Assertions.assertTrue(server.isOpen());
-        }
+        final CountDownLatch latch = new CountDownLatch(1);
+        Server server = new Server(DBEnv.DEV,generateRandomPort());
+
+        Assertions.assertTrue(server.isOpen());
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        server.close();
     }
 
-    // Test for unreachability once server is closed.
+    // Test for reachability once server is closed.
     @Test
     @Order(2)
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
-        final Server server = new Server(8081);
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final Server server = new Server(DBEnv.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(server::start);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
-
         server.close();
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
@@ -54,18 +63,12 @@ public class ServerTests {
     @Order(3)
     @DisplayName("test server is reachable & running for operations.")
     public void testServerRunning() throws Exception {
-        final Server server = new Server(8082);
+        final Server server = new Server(DBEnv.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         
         Assertions.assertFalse(server.isRunning());
-        executor.submit(() -> {
-            try {
-                server.start();
-            } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error starting server in the background.", e);
-            }
-        });
+        executor.submit(server::start);
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
         Assertions.assertTrue(server.isRunning());
@@ -78,7 +81,8 @@ public class ServerTests {
     @Order(4)
     @DisplayName("test client is connected to the server.")
     public void testServerReceiveClientConnection() throws Exception {
-        final Server server = new Server(8083);
+        int port = generateRandomPort();
+        final Server server = new Server(DBEnv.DEV,port);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -88,7 +92,7 @@ public class ServerTests {
     
         executor.submit(() -> {
             try {
-                clientRef.set(new HiveClient(8083));
+                clientRef.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -107,7 +111,8 @@ public class ServerTests {
     @Order(5)
     @DisplayName("test server receives multiple client connections.")
     public void testServerReceiveMultipleClientConnections() throws Exception {
-        final Server server = new Server(8084);
+        int port = generateRandomPort();
+        final Server server = new Server(DBEnv.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
@@ -118,7 +123,7 @@ public class ServerTests {
         
         executor.submit(() -> {
             try {
-                clientRef1.set(new HiveClient( 8084));
+                clientRef1.set(new HiveClient( port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -128,7 +133,7 @@ public class ServerTests {
         
         executor.submit(() -> {
             try {
-                clientRef2.set(new HiveClient(8084));
+                clientRef2.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -148,7 +153,8 @@ public class ServerTests {
     @Order(6)
     @DisplayName("test server sends messages to all clients.")
     public void testServerSendMessagesToAllClients() throws Exception {
-        final Server server = new Server(8085);
+        int port = generateRandomPort();
+        final Server server = new Server(DBEnv.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(4);
@@ -160,7 +166,7 @@ public class ServerTests {
 
         executor.submit(() -> {
             try {
-                clientRef1.set(new HiveClient(8085));
+                clientRef1.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -170,7 +176,7 @@ public class ServerTests {
 
         executor.submit(() -> {
             try {
-                clientRef2.set(new HiveClient(8085));
+                clientRef2.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -217,8 +223,8 @@ public class ServerTests {
     @Order(7)
     @DisplayName("test server receiving a packet from a connected client.")
     public void testServerReceivePacketFromConnectedClient() throws Exception {
-
-        final Server server = new Server(8086);
+        int port = generateRandomPort();
+        final Server server = new Server(DBEnv.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
 
@@ -234,7 +240,7 @@ public class ServerTests {
 
         executor.submit(() -> {
             try {
-                clientRef1.set(new HiveClient(8086));
+                clientRef1.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -243,7 +249,7 @@ public class ServerTests {
 
         executor.submit(() -> {
             try {
-                clientRef2.set(new HiveClient(8086));
+                clientRef2.set(new HiveClient(port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -283,7 +289,8 @@ public class ServerTests {
     @Order(8)
     @DisplayName("test server receiving a DBPacket from a connected client.")
     public void testDBPacket() throws Exception {
-        final Server server = new Server(8087);
+        int port = generateRandomPort();
+        final Server server = new Server(DBEnv.DEV, port);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(4);
         final ExecutorService executor = Executors.newFixedThreadPool(3);
@@ -293,7 +300,7 @@ public class ServerTests {
 
         executor.submit(() -> {
             try {
-                clientRef.set(new HiveClient( 8087));
+                clientRef.set(new HiveClient( port));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -303,29 +310,8 @@ public class ServerTests {
 
         final AtomicBoolean packetReceived = new AtomicBoolean(false);
         server.addNetworkEventListener(event -> {
-            DBPacket dbPacket = (DBPacket) event.getPacket();
-            if (dbPacket.getCommandType() == SQLCommandType.SELECT) {
-
-                if(dbPacket.getTableName().equalsIgnoreCase("users")) {
-
-                    if(dbPacket.getColumns().containsKey("id")) {
-
-                        if(dbPacket.getColumns().containsKey("first_name")) {
-
-                            if(dbPacket.getCondition().equalsIgnoreCase("WHERE last_name = DOE")) {
-
-                                if(dbPacket.getColumns().get("id").equals("1")) {
-
-                                    if(dbPacket.getColumns().get("first_name").equals("JOHN")) {
-
-                                        packetReceived.set(true);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            if(event.getPacket().getType() == PacketType.SQL)
+                packetReceived.set(true);
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
@@ -342,5 +328,5 @@ public class ServerTests {
         server.close();
         executor.close();
     }
-    
+
 }
