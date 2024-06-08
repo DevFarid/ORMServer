@@ -144,4 +144,21 @@ public class QueryBuilderTests {
         Assertions.assertEquals("SELECT name FROM customers WHERE name IS NOT NULL;", query);
         System.out.println(query);
     }
+
+    @Test
+    @Order(8)
+    @DisplayName("test-8: test select distinct query")
+    public void testSelectDistinct() {
+        String query = QueryBuilder.builder()
+                .selectDistinct("name")
+                .from("customers")
+                .where(new Where()
+                        .column("name")
+                        .op(ComparisonOp.EQUALS)
+                        .value("John")
+                )
+                .toString();
+        Assertions.assertEquals("SELECT DISTINCT name FROM customers WHERE name = John;", query);
+        System.out.println(query);
+    }
 }

@@ -1,28 +1,49 @@
 package hive.sql;
 
+/**
+ * This class is used to build SQL queries.
+ * Created by SixEyes on 06/07/2024.
+ */
 public class Where {
-
     private String column;
     private ComparisonOp op;
     private String value;
 
-    public Where() {}
-
+    /**
+     * Sets the column to be queried.
+     * @param column The column to be queried.
+     * @return The new modified Where object.
+     */
     public Where column(String column) {
         this.column = column;
         return this;
     }
 
+    /**
+     * Specifies the comparison operator to be used.
+     * @param op The comparison operator to be used.
+     * @return The new modified Where object.
+     */
     public Where op(ComparisonOp op) {
         this.op = op;
         return this;
     }
 
+    /**
+     * Specifies the value to be compared against.
+     * @param value The value to be compared against.
+     * @return The new modified Where object.
+     */
     public Where value(String value) {
         this.value = value;
         return this;
     }
 
+    /**
+     * Specifies the values to be compared against.
+     * @param values The values to be compared against.
+     * @return The new modified Where object.
+     */
     public Where value(String... values) {
         if(values.length > 0) {
             StringBuilder sb = new StringBuilder("(");
@@ -38,6 +59,10 @@ public class Where {
         return this;
     }
 
+    /**
+     * Generates the where clause string.
+     * @return The where clause string.
+     */
     @Override
     public String toString() {
         if(value != null)

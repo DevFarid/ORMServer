@@ -8,26 +8,33 @@ import java.util.List;
  * Created by SixEyes on 06/07/2024.
  */
 public class WhereAttacher {
-
     private final List<Where> whereClauses = new ArrayList<>();
     private final List<ComparisonOp> clauseComparisons = new ArrayList<>();
 
-    public WhereAttacher() {}
-
-    public WhereAttacher add(Where where, ComparisonOp comparison) {
+    /**
+     * Adds a where clause to the list of where clauses.
+     * @param where The clause to add to the compound.
+     * @param trailingComparison The comparison operator to append to the clause.
+     * @return The new modified WhereAttacher object.
+     */
+    public WhereAttacher add(Where where, ComparisonOp trailingComparison) {
         whereClauses.add(where);
-        clauseComparisons.add(comparison);
+        clauseComparisons.add(trailingComparison);
         return this;
     }
 
-    public static WhereAttacher builder() {
-        return new WhereAttacher();
-    }
-
+    /**
+     * Checks if there are any conditions in the where clause.
+     * @return True if there are conditions, false otherwise.
+     */
     public boolean hasConditions() {
         return !whereClauses.isEmpty();
     }
 
+    /**
+     * Generates the where clause(s) string.
+     * @return The where clause(s) string.
+     */
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
@@ -38,5 +45,13 @@ public class WhereAttacher {
             }
         }
         return stringBuilder.toString();
+    }
+
+    /**
+     * Creates a new WhereAttacher object.
+     * @return The new WhereAttacher object.
+     */
+    public static WhereAttacher builder() {
+        return new WhereAttacher();
     }
 }
