@@ -2,7 +2,10 @@ package hive.event;
 
 import hive.packets.Packet;
 
-// Define an event class
+/**
+ * A network event that holds the sender and the packet.
+ * Created by SixEyes on 2024-05-01.
+ */
 public final class NetworkEvent {
     private final NetworkEventNotifier packetSender;
     private final Packet packet;

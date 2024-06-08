@@ -1,5 +1,6 @@
 package hive;
 
+import hive.commands.CMDLoader;
 import hive.console.Console;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
@@ -12,10 +13,15 @@ import java.nio.channels.SocketChannel;
 import java.util.logging.Level;
 import java.util.Iterator;
 
+/**
+ * A client that connects to a server and sends/receives messages.
+ * Created by SixEyes on 2024-04-07.
+ */
 public class HiveClient extends Console {
 
     public HiveClient(int port) throws IOException {
         super(false, port);
+        addCommands(CMDLoader.CLIENT.loadCommands(this));
     }
 
     /**

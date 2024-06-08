@@ -1,7 +1,11 @@
 package hive;
 
+import hive.commands.CMDLoader;
+import hive.database.DBConnection;
+import hive.database.DBEnv;
 import hive.commands.ConsoleCommand;
 import hive.console.Console;
+import hive.packets.DBPacket;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import misc.Utils;
@@ -9,6 +13,9 @@ import misc.Utils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -20,42 +27,12 @@ import java.util.logging.Level;
 public class Server extends Console implements AutoCloseable {
 
     private final List<SocketChannel> connectedClients = new ArrayList<>();
+    private final DBConnection dbConn;
 
-    public Server(int port) throws IOException {
+    public Server(DBEnv env, int port) throws IOException, SQLException {
         super(true, port);
-
-        ConsoleCommand clientList = new ConsoleCommand("clients") {
-            @Override
-            public boolean requiresParams() {
-                return false;
-            }
-        };
-        clientList.setRunnableAction(() -> {
-            getLogger().info("Connected clients:");
-            getConnectedClients().forEach(client -> {
-                try {
-                    getLogger().info(client.getRemoteAddress().toString());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        });
-
-        ConsoleCommand broadcastCmd = new ConsoleCommand("broadcast") {
-            @Override
-            public boolean requiresParams() {
-                return true;
-            }
-        };
-        broadcastCmd.setRunnableAction(() -> {
-            if(broadcastCmd.getParams().isEmpty()) {
-                getLogger().info("No message to broadcast.");
-                return;
-            }
-            broadcastMessage(String.join(" ", broadcastCmd.getParams()));
-        });
-
-        addCommands(clientList, broadcastCmd);
+        this.dbConn = new DBConnection(env);
+        addCommands(CMDLoader.SERVER.loadCommands(this));
     }
 
     /**
@@ -101,7 +78,10 @@ public class Server extends Console implements AutoCloseable {
                                         MSGPacket msgPacket = (MSGPacket) receivedPacket;
                                         getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
                                     }
-                                    case SQL -> getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                    case SQL -> {
+                                        getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                        this.dbConn.decomposePacket((DBPacket) receivedPacket);
+                                    }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
                             }
@@ -173,7 +153,6 @@ public class Server extends Console implements AutoCloseable {
     public boolean isOpen() {
         return this.getChannel().isOpen() && this.getSelector().isOpen();
     }
-
     /**
      * Send a packet to a client.
      * @param client the client to send the packet to.
@@ -219,6 +198,26 @@ public class Server extends Console implements AutoCloseable {
     }
 
     /**
+     * Checks if the server can interact with data (i.e. crud operations on the database).
+     * To interact with data, the server must be open, running, and the database connection must be open.
+     * @return true if the satisfactory conditions are met, false otherwise.
+     */
+    public boolean canInteractWithData() {
+        boolean[] canInteract = {
+                this.isOpen(),
+                this.isRunning(),
+                this.dbConn.getConnectionSource() != null,
+                this.dbConn.getConnectionSource().isOpen(this.dbConn.getEnv().getDatabaseUrl())
+        };
+
+        for(boolean can : canInteract) {
+            if(!can) return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Stops the server.
      */
     @Override
@@ -242,9 +241,8 @@ public class Server extends Console implements AutoCloseable {
         stop();
     }
 
-
     public static void main(String[] args) throws Exception {
-        try(Server server = new Server(25565)) {
+        try(Server server = new Server(DBEnv.DEV, 25565)) {
             server.start();
         } catch(IOException e) {
             System.out.printf(

@@ -6,6 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * A network event notifier that notifies all listeners of a new message.
+ * Created by SixEyes on 2024-05-01.
+ */
 public abstract class NetworkEventNotifier {
     private final List<NetworkEventListener> listeners = new ArrayList<>();
 
