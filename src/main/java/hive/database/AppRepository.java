@@ -1,6 +1,7 @@
 package hive.database;
 
 import com.j256.ormlite.support.ConnectionSource;
+import hive.packets.DBPacket;
 import hive.packets.Packet;
 
 /**
@@ -21,7 +22,8 @@ public class AppRepository {
      * type of packet it is, so that the operation can be performed accordingly.
      * @param packet packet to decompose.
      */
-    public void decompose(Packet packet) {
+    public void decompose(DBPacket packet) {
+
     }
 
     public static void main(String[] args) {

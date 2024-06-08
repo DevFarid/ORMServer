@@ -5,6 +5,7 @@ import hive.database.DBConnection;
 import hive.database.DBEnv;
 import hive.commands.ConsoleCommand;
 import hive.console.Console;
+import hive.packets.DBPacket;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import misc.Utils;
@@ -77,7 +78,10 @@ public class Server extends Console implements AutoCloseable {
                                         MSGPacket msgPacket = (MSGPacket) receivedPacket;
                                         getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
                                     }
-                                    case SQL -> getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                    case SQL -> {
+                                        getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                        this.dbConn.decomposePacket((DBPacket) receivedPacket);
+                                    }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
                             }

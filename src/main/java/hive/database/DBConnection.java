@@ -2,6 +2,7 @@ package hive.database;
 
 import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
 import com.j256.ormlite.support.ConnectionSource;
+import hive.packets.DBPacket;
 import hive.packets.Packet;
 
 import java.sql.SQLException;
@@ -45,7 +46,7 @@ public class DBConnection {
      * Decompose the packet into the database.
      * @param packet packet to decompose.
      */
-    public void decomposePacket(Packet packet) {
+    public void decomposePacket(DBPacket packet) {
         this.appRepository.decompose(packet);
     }
 
