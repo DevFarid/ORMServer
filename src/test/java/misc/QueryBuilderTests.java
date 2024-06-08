@@ -114,8 +114,8 @@ public class QueryBuilderTests {
     @DisplayName("test-6: test where in clause")
     public void testWhereIn() {
         String query = QueryBuilder.builder()
-                        .select("name")
-                        .from("customers")
+                        .select("id")
+                        .from("TestEntity")
                         .where(new Where()
                                         .column("name")
                                         .op(ComparisonOp.IN)
@@ -123,7 +123,7 @@ public class QueryBuilderTests {
                                 , null
                         )
                 .toString();
-        Assertions.assertEquals("SELECT name FROM customers WHERE name IN ('Bob', 'Fred', 'Harry');", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name IN ('Bob', 'Fred', 'Harry');", query);
         System.out.println(query);
     }
 
@@ -132,8 +132,8 @@ public class QueryBuilderTests {
     @DisplayName("test-7: test where is not null clause")
     public void testWhereIsNotNull() {
         String query = QueryBuilder.builder()
-                        .select("name")
-                        .from("customers")
+                        .select("id")
+                        .from("TestEntity")
                                 .where(
                                         new Where()
                                                 .column("name")
@@ -141,7 +141,7 @@ public class QueryBuilderTests {
 
                                 )
                 .toString();
-        Assertions.assertEquals("SELECT name FROM customers WHERE name IS NOT NULL;", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name IS NOT NULL;", query);
         System.out.println(query);
     }
 
@@ -151,14 +151,32 @@ public class QueryBuilderTests {
     public void testSelectDistinct() {
         String query = QueryBuilder.builder()
                 .selectDistinct("name")
-                .from("customers")
+                .from("TestEntity")
                 .where(new Where()
-                        .column("name")
-                        .op(ComparisonOp.EQUALS)
-                        .value("John")
+                        .column("age")
+                        .op(ComparisonOp.GREATER_THAN_OR_EQUALS)
+                        .value("18")
                 )
                 .toString();
-        Assertions.assertEquals("SELECT DISTINCT name FROM customers WHERE name = John;", query);
+        Assertions.assertEquals("SELECT DISTINCT name FROM TestEntity WHERE age >= 18;", query);
+        System.out.println(query);
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("test-9: test select with order by clause")
+    public void testSelectOrderBy() {
+        String query = QueryBuilder.builder()
+                .select("name", "age")
+                .from("TestEntity")
+                .orderBy(
+                        hive.sql.Order.builder("salary", false)
+                )
+                .orderBy(
+                        hive.sql.Order.builder("age", true)
+                )
+                .toString();
+        Assertions.assertEquals("SELECT name, age FROM TestEntity ORDER BY salary DESC, age ASC;", query);
         System.out.println(query);
     }
 }

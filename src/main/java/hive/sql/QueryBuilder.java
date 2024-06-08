@@ -3,6 +3,7 @@ package hive.sql;
 import hive.packets.SQLCommandType;
 import misc.Utils;
 
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -14,6 +15,7 @@ public class QueryBuilder {
     String[] columns;
     String table;
     WhereAttacher whereAttacher = WhereAttacher.builder();
+    OrderBuilder orderBuilder = OrderBuilder.builder();
     SQLCommandType commandType;
 
     /**
@@ -88,6 +90,16 @@ public class QueryBuilder {
     }
 
     /**
+     * Adds an order by clause to the query.
+     * @param order The order by clause to add.
+     * @return The new modified QueryBuilder object.
+     */
+    public QueryBuilder orderBy(Order order) {
+        this.orderBuilder.add(order);
+        return this;
+    }
+
+    /**
      * Builds the query.
      * @return The query string.
      */
@@ -99,6 +111,9 @@ public class QueryBuilder {
         query.append(" FROM ").append(table);
         if (this.whereAttacher != null && this.whereAttacher.hasConditions()) {
             query.append(" WHERE ").append(this.whereAttacher);
+        }
+        if (this.orderBuilder != null && this.orderBuilder.hasOrders()) {
+            query.append(" ").append(this.orderBuilder);
         }
         return query.append(";").toString();
     }

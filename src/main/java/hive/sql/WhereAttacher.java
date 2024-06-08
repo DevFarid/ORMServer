@@ -18,8 +18,8 @@ public class WhereAttacher {
      * @return The new modified WhereAttacher object.
      */
     public WhereAttacher add(Where where, ComparisonOp trailingComparison) {
-        whereClauses.add(where);
-        clauseComparisons.add(trailingComparison);
+        this.whereClauses.add(where);
+        this.clauseComparisons.add(trailingComparison);
         return this;
     }
 
@@ -28,7 +28,7 @@ public class WhereAttacher {
      * @return True if there are conditions, false otherwise.
      */
     public boolean hasConditions() {
-        return !whereClauses.isEmpty();
+        return !this.whereClauses.isEmpty();
     }
 
     /**
@@ -38,10 +38,10 @@ public class WhereAttacher {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < whereClauses.size(); i++) {
-            stringBuilder.append(whereClauses.get(i));
-            if (i < whereClauses.size() - 1) {
-                stringBuilder.append(" ").append(clauseComparisons.get(i)).append(" ");
+        for (int i = 0; i < this.whereClauses.size(); i++) {
+            stringBuilder.append(this.whereClauses.get(i));
+            if (i < this.whereClauses.size() - 1) {
+                stringBuilder.append(" ").append(this.clauseComparisons.get(i)).append(" ");
             }
         }
         return stringBuilder.toString();
