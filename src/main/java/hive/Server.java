@@ -13,10 +13,12 @@ import misc.Utils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 /**
@@ -28,13 +30,32 @@ public class Server extends Console implements AutoCloseable {
 
     private final List<SocketChannel> connectedClients = new ArrayList<>();
     private final DBConnection dbConn;
+    private final AtomicReference<String> passphrase = new AtomicReference<>();
 
-    public Server(DBEnv env, int port) throws IOException, SQLException {
+    public Server(DBEnv env, int port) throws IOException, SQLException, IllegalArgumentException {
         super(true, port);
-        this.dbConn = new DBConnection(env);
         addCommands(CMDLoader.SERVER.loadCommands(this));
+
+        try {
+            this.dbConn = new DBConnection(env);
+        } catch (IllegalArgumentException e) {
+            getLogger().log(Level.SEVERE, "Error authenticating.", e);
+            throw e;
+        }
+        this.setupHandShakeKey();
     }
 
+    private void setupHandShakeKey() {
+        this.passphrase.set(
+                Utils.hashPassword(
+                        Utils.readFileRaw(
+                                String.format(
+                                        "%s/auth.txt", Paths.get("").toAbsolutePath()
+                                )
+                        )
+                )
+        );
+    }
     /**
      * Starts the server.
      * Starts a scanner thread that will listen for user commands.
