@@ -1,9 +1,7 @@
 package misc.querybuilder;
 
-import hive.sql.cmdbuilder.SQLCommandType;
 import hive.sql.cmdbuilder.SelectBuilder;
 import hive.sql.elements.ComparisonOp;
-import hive.sql.QueryBuilder;
 import hive.sql.elements.Where;
 import org.junit.jupiter.api.*;
 
@@ -15,14 +13,27 @@ import org.junit.jupiter.api.*;
 public class SelectTests {
 
     @Test
-    @Order(1)
-    @DisplayName("test-1: Select query w/o where clause")
+    @Order(0)
+    @DisplayName("test-0: Select query w/o where clause")
     public void testColumns() {
-        String query = QueryBuilder.builder(SQLCommandType.SELECT)
+        String query = SelectBuilder.builder(false)
                 .columns("id")
                 .table("TestEntity")
                 .toString();
         Assertions.assertEquals("SELECT id FROM TestEntity;", query);
+        System.out.println(query);
+    }
+
+    @Test
+    @Order(1)
+    @DisplayName("test-1: Select query w/o where clause")
+    public void testColumnWhereIdEquals() {
+        String query = SelectBuilder.builder(false)
+                .columns("id")
+                .table("TestEntity")
+                .where("id", ComparisonOp.EQUALS, "ec0a4128-557f-42f2-b5ac-7efbb3ceee1d")
+                .toString();
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE id = ec0a4128-557f-42f2-b5ac-7efbb3ceee1d;", query);
         System.out.println(query);
     }
 
