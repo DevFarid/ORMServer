@@ -35,13 +35,7 @@ public class DBConnection {
     private void auth() throws IllegalArgumentException {
         this.connectionSource.setUsername(username);
         this.connectionSource.setPassword(
-                Utils.hashPassword(
-                        Utils.readFileRaw(
-                                String.format(
-                                        "%s/auth.txt", Paths.get("").toAbsolutePath()
-                                )
-                        )
-                )
+                Utils.hashPassword(Utils.randomString(16))
         );
     }
 

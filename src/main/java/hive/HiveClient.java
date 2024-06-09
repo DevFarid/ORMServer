@@ -2,7 +2,6 @@ package hive;
 
 import hive.commands.CMDLoader;
 import hive.console.Console;
-import hive.packets.MSGPacket;
 import hive.packets.Packet;
 import misc.Utils;
 
@@ -10,6 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.Iterator;
 
@@ -22,6 +22,16 @@ public class HiveClient extends Console {
     public HiveClient(int port) throws IOException {
         super(false, port);
         addCommands(CMDLoader.CLIENT.loadCommands(this));
+    }
+
+    private void auth() throws IllegalArgumentException {
+        this.runCommandIf("login", "admin",
+                Utils.readFileRaw(
+                        String.format(
+                                "%s/key.txt", Paths.get("").toAbsolutePath()
+                        )
+                )
+        );
     }
 
     /**
@@ -48,13 +58,19 @@ public class HiveClient extends Console {
 
                         if (channel.isConnectionPending()) {
                             channel.finishConnect();
+
+                            try {
+                                this.auth();
+                            } catch (IllegalArgumentException e) {
+                                getLogger().log(Level.SEVERE, "Error authenticating.", e);
+                                stop();
+                            }
                         }
 
                         // Register
                         channel.register(getSelector(), SelectionKey.OP_READ);
                         getLogger().info(String.format("Connected to server %s", channel.getRemoteAddress()));
 
-                        sendPacket(new MSGPacket("New client connected."));
                     } else if(key.isReadable()) {
                         Packet packet = this.read();
                         if (packet != null) {

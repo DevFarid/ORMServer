@@ -41,6 +41,8 @@ public class Utils {
                 }
 
                 return packet;
+            case AUTH:
+                return AuthPacket.of(parts[1], parts[2]);
             default:
                 throw new IllegalArgumentException("Invalid packet type: " + type);
         }
@@ -110,15 +112,14 @@ public class Utils {
         }
     }
 
-    public static String hashPassword(String password) {
+    public static String hashPassword(String password) throws IllegalArgumentException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new IllegalArgumentException(e);
         }
-        return null;
     }
 
     /**
@@ -129,7 +130,7 @@ public class Utils {
      *
      * @author acc
      */
-    public static String bytesToHex(byte[] bytes) {
+    private static String bytesToHex(byte[] bytes) {
         final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
         char[] hexChars = new char[bytes.length * 2];
         for (int j = 0; j < bytes.length; j++) {
@@ -155,5 +156,25 @@ public class Utils {
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    /**
+     * Generates a random string of length {@code i}.
+     * @param i the length of the string to generate.
+     * @return a random string of length {@code i}.
+     */
+    public static String randomString(int i) {
+        String strSet = "_+!@#$%^&*()ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder builder = new StringBuilder();
+        while (i-- != 0) {
+            int character = (int)(Math.random()*strSet.length());
+            char c = strSet.charAt(character);
+
+            if(Character.isAlphabetic(c) && Math.random() > 0.49f)
+                builder.append(Character.toLowerCase(c));
+
+            builder.append(strSet.charAt(character));
+        }
+        return builder.toString();
     }
 }
