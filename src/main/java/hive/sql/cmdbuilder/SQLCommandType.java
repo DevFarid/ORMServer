@@ -10,8 +10,7 @@ import java.util.logging.Logger;
  */
 public enum SQLCommandType {
     SELECT(SelectBuilder.class),
-    SELECT_DISTINCT(SelectBuilder.class),
-    ALTER(AlterBuilder.class);
+    ALTER_TABLE(AlterBuilder.class);
 
     private final Class<? extends QueryBuilder> builder;
     private final Logger logger = Logger.getLogger(SQLCommandType.class.getName());

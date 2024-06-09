@@ -9,12 +9,13 @@ import hive.sql.elements.*;
 public class SelectBuilder extends QueryBuilder {
     private final WhereAttacher whereAttacher = WhereAttacher.builder();
     private final OrderBuilder orderBuilder = OrderBuilder.builder();
-
+    private boolean isDistinct = false;
     /**
      * Constructs a new SelectBuilder object.
      */
     public SelectBuilder(boolean isDistinct) {
-        super(isDistinct ? SQLCommandType.SELECT_DISTINCT : SQLCommandType.SELECT);
+        super(SQLCommandType.SELECT);
+        this.isDistinct = isDistinct;
     }
 
     /**
@@ -103,6 +104,9 @@ public class SelectBuilder extends QueryBuilder {
     public String toString() {
         StringBuilder query = new StringBuilder();
         query.append(getCommandType().getSQL());
+        if(this.isDistinct) {
+            query.append(" DISTINCT");
+        }
         query.append(String.format(" %s", String.join(", ", getColumns())));
         query.append(" FROM ").append(getTable());
         if (this.whereAttacher.hasConditions()) {
@@ -119,10 +123,6 @@ public class SelectBuilder extends QueryBuilder {
      * @return The new SelectBuilder object.
      */
     public static SelectBuilder builder(boolean isDistinct) {
-        return isDistinct ? SQLCommandType
-                .SELECT_DISTINCT
-                .parameter(boolean.class)
-                .init(isDistinct)
-                .getBuilderInstance() : SQLCommandType.SELECT.getBuilderInstance();
+        return SQLCommandType.SELECT.parameter(boolean.class).init(isDistinct).getBuilderInstance();
     }
 }

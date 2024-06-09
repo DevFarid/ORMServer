@@ -81,10 +81,10 @@ public class AppRepository {
      */
     public void decompose(DBPacket packet) {
         switch (packet.getCommandType()) {
-            case SELECT, SELECT_DISTINCT:
+            case SELECT:
                 this.select(packet);
                 break;
-            case ALTER:
+            case ALTER_TABLE:
                 this.alter(packet);
                 break;
             default:
