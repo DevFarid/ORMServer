@@ -1,6 +1,7 @@
 package hive;
 import hive.database.DBEnv;
 import hive.packets.*;
+import hive.sql.cmdbuilder.SQLCommandType;
 import org.junit.jupiter.api.*;
 
 
@@ -12,8 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Test coverage for the {@code Server} server class.

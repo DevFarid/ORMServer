@@ -1,6 +1,7 @@
 package misc;
 
 import hive.packets.*;
+import hive.sql.cmdbuilder.SQLCommandType;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;

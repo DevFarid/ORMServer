@@ -1,50 +1,37 @@
 package hive.sql;
 
-import hive.packets.SQLCommandType;
+import hive.sql.cmdbuilder.SQLCommandType;
 import misc.Utils;
 
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
  * This class is used to build SQL queries.
  * Created by SixEyes on 06/07/2024.
  */
-public class QueryBuilder {
+public abstract class QueryBuilder {
     private final Logger logger = Logger.getLogger(QueryBuilder.class.getName());
-    String[] columns;
-    String table;
-    WhereAttacher whereAttacher = WhereAttacher.builder();
-    OrderBuilder orderBuilder = OrderBuilder.builder();
-    SQLCommandType commandType;
+    private String[] columns;
+    private String table;
+    private final SQLCommandType commandType;
+
+    /**
+     * Constructs a new QueryBuilder object.
+     * @param commandType The type of SQL command to build.
+     */
+    public QueryBuilder(SQLCommandType commandType) {
+        this.commandType = commandType;
+    }
 
     /**
      * Selects the columns to be queried.
      * @param columns The columns to be queried.
      * @return The new modified QueryBuilder object.
      */
-    public QueryBuilder select(String... columns) {
+    public QueryBuilder columns(String... columns) {
         try {
             Utils.strArrayNNorNE(columns);
             this.columns = columns;
-            this.commandType = SQLCommandType.SELECT;
-            return this;
-        } catch (Exception e) {
-            logger.severe("Error: " + e.getMessage());
-        }
-        return null;
-    }
-
-    /**
-     * Selects distinct rows to be queried.
-     * @param columns The columns to select.
-     * @return The new modified QueryBuilder object.
-     */
-    public QueryBuilder selectDistinct(String... columns) {
-        try {
-            Utils.strArrayNNorNE(columns);
-            this.columns = columns;
-            this.commandType = SQLCommandType.SELECT_DISTINCT;
             return this;
         } catch (Exception e) {
             logger.severe("Error: " + e.getMessage());
@@ -57,7 +44,7 @@ public class QueryBuilder {
      * @param table The table to query from.
      * @return The new modified QueryBuilder object.
      */
-    public QueryBuilder from(String table) {
+    public QueryBuilder table(String table) {
         try {
             Utils.strNNorNE(table);
             this.table = table;
@@ -68,61 +55,37 @@ public class QueryBuilder {
         return null;
     }
 
+    public abstract String toString();
+
     /**
-     * Adds a single where clause to the query.
-     * @param where The where clause to add.
-     * @return The new modified QueryBuilder object.
+     * Gets the type of SQL command to build.
+     * @return The type of SQL command to build.
      */
-    public QueryBuilder where(Where where) {
-        this.whereAttacher.add(where, null);
-        return this;
+    public SQLCommandType getCommandType() {
+        return this.commandType;
     }
 
     /**
-     * Adds a compounding where clause to the query.
-     * @param where The where clause to add.
-     * @param conjugation The conjunction to use.
-     * @return The new modified QueryBuilder object.
+     * Gets the columns to be queried.
+     * @return The columns to be queried.
      */
-    public QueryBuilder where(Where where, ComparisonOp conjugation) {
-        this.whereAttacher.add(where, conjugation);
-        return this;
+    public String[] getColumns() {
+        return this.columns;
     }
 
     /**
-     * Adds an order by clause to the query.
-     * @param order The order by clause to add.
-     * @return The new modified QueryBuilder object.
+     * Gets the table to query from.
+     * @return The table to query from.
      */
-    public QueryBuilder orderBy(Order order) {
-        this.orderBuilder.add(order);
-        return this;
-    }
-
-    /**
-     * Builds the query.
-     * @return The query string.
-     */
-    @Override
-    public String toString() {
-        StringBuilder query = new StringBuilder();
-        query.append(commandType.getSQL());
-        query.append(String.format(" %s", String.join(", ", columns)));
-        query.append(" FROM ").append(table);
-        if (this.whereAttacher != null && this.whereAttacher.hasConditions()) {
-            query.append(" WHERE ").append(this.whereAttacher);
-        }
-        if (this.orderBuilder != null && this.orderBuilder.hasOrders()) {
-            query.append(" ").append(this.orderBuilder);
-        }
-        return query.append(";").toString();
+    public String getTable() {
+        return this.table;
     }
 
     /**
      * Creates a new QueryBuilder object.
      * @return The new QueryBuilder object.
      */
-    public static QueryBuilder builder() {
-        return new QueryBuilder();
+    public static <T extends QueryBuilder> T builder(SQLCommandType commandType) {
+        return commandType.getBuilderInstance();
     }
 }

@@ -1,4 +1,4 @@
-package hive.sql;
+package hive.sql.elements;
 
 import java.util.ArrayList;
 import java.util.List;

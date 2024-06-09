@@ -81,39 +81,21 @@ public class AppRepository {
      */
     public void decompose(DBPacket packet) {
         switch (packet.getCommandType()) {
-            case CREATE:
-                this.create(packet);
-                break;
-            case SELECT:
+            case SELECT, SELECT_DISTINCT:
                 this.select(packet);
                 break;
-            case INSERT:
-                this.insert(packet);
-                break;
-            case UPDATE:
-                this.update(packet);
-                break;
-            case DELETE:
-                this.delete(packet);
+            case ALTER:
+                this.alter(packet);
                 break;
             default:
                 this.logger.warning("Unknown command type.");
         }
     }
 
-    private void create(DBPacket packet) {
-    }
-
     private void select(DBPacket packet) {
     }
 
-    private void insert(DBPacket packet) {
-    }
-
-    private void update(DBPacket packet) {
-    }
-
-    private void delete(DBPacket packet) {
+    private void alter(DBPacket packet) {
     }
 
     /**

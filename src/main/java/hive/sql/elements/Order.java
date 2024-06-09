@@ -1,4 +1,4 @@
-package hive.sql;
+package hive.sql.elements;
 
 public class Order {
     private String column;

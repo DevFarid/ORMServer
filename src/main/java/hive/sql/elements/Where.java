@@ -1,4 +1,4 @@
-package hive.sql;
+package hive.sql.elements;
 
 /**
  * This class is used to build SQL queries.
@@ -8,6 +8,26 @@ public class Where {
     private String column;
     private ComparisonOp op;
     private String value;
+
+    private Where(String column, ComparisonOp op, String value) {
+        this.column = column;
+        this.op = op;
+        this.value = value;
+    }
+
+    private Where(String column, ComparisonOp op, String... value) {
+        this.column = column;
+        this.op = op;
+        this.value(value);
+    }
+
+    public static Where of(String column, ComparisonOp op, String value) {
+        return new Where(column, op, value);
+    }
+
+    public static Where of(String column, ComparisonOp op, String... value) {
+        return new Where(column, op, value);
+    }
 
     /**
      * Sets the column to be queried.
