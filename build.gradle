@@ -20,12 +20,12 @@ dependencies {
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.0-M2')
     testImplementation('org.junit.platform:junit-platform-suite-engine:1.11.0-M2')
 
-    testImplementation("com.google.guava:guava:33.1.0-jre")
+    testImplementation('com.google.guava:guava:33.2.1-jre')
     annotationProcessor('org.projectlombok:lombok:1.18.30')
 
     implementation('com.j256.ormlite:ormlite-jdbc:6.1')
     implementation('com.j256.ormlite:ormlite-core:6.1')
-    implementation('org.xerial:sqlite-jdbc:3.45.1.0')
+    implementation('org.xerial:sqlite-jdbc:3.46.0.0')
 
     // SLF4J API
     implementation('org.slf4j:slf4j-api:2.0.9')
