@@ -11,8 +11,14 @@ public class TestEntity extends AbstractEntityClass {
 
     @DatabaseField(columnName = "id", generatedId = true, canBeNull = false, unique = true)
     public UUID id;
+
+    @DatabaseField(columnName = "name", canBeNull = false)
     public String name;
+
+    @DatabaseField(columnName = "age", canBeNull = false)
     public int age;
+
+    @DatabaseField(columnName = "salary")
     public float salary;
 
     public TestEntity() {
