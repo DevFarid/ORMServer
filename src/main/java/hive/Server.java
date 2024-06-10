@@ -87,8 +87,12 @@ public class Server extends Console implements AutoCloseable {
                             }
                         }
                     }
-                } catch (IOException e) {
-                    getLogger().log(Level.SEVERE, "Error selecting.", e);
+                } catch (IOException | SQLException e) {
+                    if(e instanceof IOException) {
+                        getLogger().log(Level.SEVERE, "Error selecting.", e);
+                    } else {
+                        getLogger().log(Level.SEVERE, "Error decomposing packet.", e);
+                    }
                 }
 
             }
@@ -225,8 +229,7 @@ public class Server extends Console implements AutoCloseable {
         try {
             if(getState().get()) {
                 getState().set(false);
-                this.getSelector().wakeup();
-                this.getSelector().close();
+                this.getSelector().wakeup().close();
                 this.getChannel().close();
                 this.closeObservers();
                 stopConsole();

@@ -46,7 +46,7 @@ public class DBConnection {
      * Decompose the packet into the database.
      * @param packet packet to decompose.
      */
-    public void decomposePacket(DBPacket packet) {
+    public void decomposePacket(DBPacket packet) throws SQLException {
         this.appRepository.decompose(packet);
     }
 

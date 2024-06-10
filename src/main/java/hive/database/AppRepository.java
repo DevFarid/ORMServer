@@ -2,8 +2,10 @@ package hive.database;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.jdbc.spring.DaoFactory;
+import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
+import hive.database.entities.TestEntity;
 import hive.packets.DBPacket;
 import misc.ReflectionUtil;
 
@@ -26,7 +28,7 @@ import java.util.logging.Logger;
 public class AppRepository {
     private final Logger logger = Logger.getLogger(AppRepository.class.getName());
     private final ConnectionSource connectionSource;
-    private final Map<String, Dao<?, Object>> entities = new HashMap<>();
+    private final Map<String, Dao<Object, Integer>> entities = new HashMap<>();
     private boolean canInteractWithData = false;
 
     public AppRepository(ConnectionSource connectionSource) {
@@ -56,7 +58,7 @@ public class AppRepository {
         List<Class<?>> loadedClasses = ReflectionUtil.loadClass(entityFiles);
         for(Class<?> clazz : loadedClasses) {
             TableUtils.createTableIfNotExists(this.connectionSource, clazz);
-            this.entities.put(clazz.getSimpleName(), DaoFactory.createDao(this.connectionSource, clazz));
+            this.entities.put(clazz.getSimpleName(), DaoFactory.createDao(this.connectionSource, (Class<Object>) clazz));
         }
 
         if(!this.entities.isEmpty()) {
@@ -69,7 +71,7 @@ public class AppRepository {
      * @param entityName entity name.
      * @return the DAO object for the given entity name.
      */
-    public Dao<?, Object> getDAO(String entityName) {
+    public Dao<Object, Integer> getDAO(String entityName) {
         return this.entities.getOrDefault(entityName, null);
     }
 
@@ -79,7 +81,7 @@ public class AppRepository {
      * type of packet it is, so that the operation can be performed accordingly.
      * @param packet packet to decompose.
      */
-    public void decompose(DBPacket packet) {
+    public void decompose(DBPacket packet) throws SQLException {
         switch (packet.getCommandType()) {
             case CREATE:
                 this.create(packet);
@@ -101,19 +103,27 @@ public class AppRepository {
         }
     }
 
-    private void create(DBPacket packet) {
+    private void create(DBPacket packet) throws SQLException {
+        getDAO(packet.getTableName())
+                .create(new TestEntity("John Doe", 25, 50000.0f));
     }
 
     private void select(DBPacket packet) {
+        QueryBuilder<Object, Integer> queryBuilder = getDAO(packet.getTableName())
+                .queryBuilder();
+
     }
 
-    private void insert(DBPacket packet) {
+    private void insert(DBPacket packet) throws SQLException {
+        getDAO(packet.getTableName())
+                .createIfNotExists(new TestEntity("Jane Doe", 30, 60000.0f));
     }
 
-    private void update(DBPacket packet) {
+    private void update(DBPacket packet) throws SQLException {
     }
 
     private void delete(DBPacket packet) {
+        
     }
 
     /**
