@@ -1,5 +1,7 @@
 package hive.packets;
 
+import hive.sql.cmdbuilder.SQLCommandType;
+
 import java.util.HashMap;
 import java.util.Map;
 

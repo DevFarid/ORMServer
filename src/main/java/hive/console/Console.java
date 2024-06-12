@@ -112,6 +112,24 @@ public abstract class Console extends NetworkEventNotifier {
         }
     }
 
+    /**
+     * Executes a command if it exists in the console.
+     * @param commandName the name of the command to execute.
+     * @param args the arguments to pass to the command, if required.
+     */
+    public void runCommandIf(String commandName, String... args) {
+        consoleCmd.stream().filter(command -> command.getCommandName().equals(commandName))
+                .findFirst().ifPresentOrElse(
+                        command -> {
+                            if (command.requiresParams()) {
+                                command.setParams(Arrays.asList(args));
+                            }
+                            runCommand(command);
+                        },
+                        () -> logger.log(Level.WARNING, "Command not found: " + commandName)
+                );
+    }
+
     public void runCommand(ConsoleCommand command) {
         command.execute();
     }

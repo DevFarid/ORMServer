@@ -3,8 +3,8 @@ package hive;
 import hive.commands.CMDLoader;
 import hive.database.DBConnection;
 import hive.database.DBEnv;
-import hive.commands.ConsoleCommand;
 import hive.console.Console;
+import hive.packets.AuthPacket;
 import hive.packets.DBPacket;
 import hive.packets.MSGPacket;
 import hive.packets.Packet;
@@ -13,10 +13,12 @@ import misc.Utils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 /**
@@ -26,15 +28,36 @@ import java.util.logging.Level;
  */
 public class Server extends Console implements AutoCloseable {
 
-    private final List<SocketChannel> connectedClients = new ArrayList<>();
-    private final DBConnection dbConn;
+    private final Set<SocketChannel> connectedClients = new HashSet<>();
+    private final Set<SocketChannel> authenticatedClients = new HashSet<>();
 
-    public Server(DBEnv env, int port) throws IOException, SQLException {
+    private final DBConnection dbConn;
+    private final AtomicReference<String> passphrase = new AtomicReference<>();
+
+    public Server(DBEnv env, int port) throws IOException, SQLException, IllegalArgumentException {
         super(true, port);
-        this.dbConn = new DBConnection(env);
         addCommands(CMDLoader.SERVER.loadCommands(this));
+
+        try {
+            this.dbConn = new DBConnection(env);
+        } catch (IllegalArgumentException e) {
+            getLogger().log(Level.SEVERE, "Error authenticating.", e);
+            throw e;
+        }
+        this.setupHandShakeKey();
     }
 
+    private void setupHandShakeKey() {
+        this.passphrase.set(
+                Utils.hashPassword(
+                        Utils.readFileRaw(
+                                String.format(
+                                        "%s/key.txt", Paths.get("").toAbsolutePath()
+                                )
+                        )
+                )
+        );
+    }
     /**
      * Starts the server.
      * Starts a scanner thread that will listen for user commands.
@@ -79,8 +102,24 @@ public class Server extends Console implements AutoCloseable {
                                         getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
                                     }
                                     case SQL -> {
+                                        if(!this.authenticatedClients.contains(clientChannel)) {
+                                            send(clientChannel, new MSGPacket("You are not authenticated."));
+                                            break;
+                                        }
+
                                         getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
                                         this.dbConn.decomposePacket((DBPacket) receivedPacket);
+                                    }
+                                    case AUTH -> {
+                                        getLogger().info(String.format("[%s](AuthPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
+                                        AuthPacket authPacket = (AuthPacket) receivedPacket;
+
+                                        if(authPacket.getHashedPass().equals(this.passphrase.get())) {
+                                            this.authenticatedClients.add(clientChannel);
+                                            getLogger().info(String.format("Authenticated %s", clientChannel.getRemoteAddress()));
+                                        } else {
+                                            getLogger().info(String.format("Failed to authenticate %s", clientChannel.getRemoteAddress()));
+                                        }
                                     }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
@@ -197,7 +236,7 @@ public class Server extends Console implements AutoCloseable {
      * Get a list of connected clients.
      * @return a list of connected clients.
      */
-    public List<SocketChannel> getConnectedClients() {
+    public Set<SocketChannel> getConnectedClients() {
         return this.connectedClients;
     }
 

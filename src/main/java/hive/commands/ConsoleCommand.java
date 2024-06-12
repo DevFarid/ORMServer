@@ -45,6 +45,7 @@ public abstract class ConsoleCommand {
 
     public void execute() {
         this.runnableAction.run();
+        this.params.clear();
     }
 
     public abstract boolean requiresParams();

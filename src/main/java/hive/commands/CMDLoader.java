@@ -3,6 +3,7 @@ package hive.commands;
 import hive.HiveClient;
 import hive.Server;
 import hive.console.Console;
+import hive.packets.AuthPacket;
 import hive.packets.MSGPacket;
 
 import java.io.IOException;
@@ -28,6 +29,18 @@ public enum CMDLoader {
                     ((HiveClient) chatMsg.getConsole()).sendPacket(new MSGPacket(String.join(" ", chatMsg.getParams())));
                 });
 
+                ConsoleCommand login = new ConsoleCommand(console, "login") {
+                    @Override
+                    public boolean requiresParams() {
+                        return true;
+                    }
+                };
+                login.setRunnableAction(() -> {
+                    HiveClient client = (HiveClient) login.getConsole();
+                    client.sendPacket(new AuthPacket(login.getParams().get(0), login.getParams().get(1)));
+                });
+
+                commands.add(login);
                 commands.add(chatMsg);
                 break;
 
@@ -41,13 +54,6 @@ public enum CMDLoader {
                 clientList.setRunnableAction(() -> {
                     Server server = (Server) clientList.getConsole();
                     server.getLogger().info("Connected clients:");
-                    for (int i = 0; i < server.getConnectedClients().size(); i++) {
-                        try {
-                            server.getLogger().info(String.format("%d. %s", i + 1, server.getConnectedClients().get(i).getRemoteAddress()));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
                 });
 
                 ConsoleCommand broadcast = new ConsoleCommand(console, "broadcast") {

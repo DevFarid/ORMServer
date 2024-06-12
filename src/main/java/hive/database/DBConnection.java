@@ -1,10 +1,14 @@
 package hive.database;
 
+import com.j256.ormlite.jdbc.JdbcConnectionSource;
 import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
+import com.j256.ormlite.jdbc.db.SqliteDatabaseType;
 import com.j256.ormlite.support.ConnectionSource;
 import hive.packets.DBPacket;
 import hive.packets.Packet;
+import misc.Utils;
 
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,14 +20,23 @@ import java.util.logging.Logger;
  */
 public class DBConnection {
     private final Logger logger = Logger.getLogger(DBConnection.class.getName());
-    private final ConnectionSource connectionSource;
+    private final JdbcConnectionSource connectionSource;
     private final AppRepository appRepository;
     private final DBEnv env;
+    private final static String username = "admin";
 
-    public DBConnection(DBEnv env) throws SQLException {
+    public DBConnection(DBEnv env) throws SQLException, IllegalArgumentException {
         this.env = env;
         this.connectionSource = new JdbcPooledConnectionSource(this.env.getDatabaseUrl());
+        this.auth();
         this.appRepository = new AppRepository(this.connectionSource);
+    }
+
+    private void auth() throws IllegalArgumentException {
+        this.connectionSource.setUsername(username);
+        this.connectionSource.setPassword(
+                Utils.hashPassword(Utils.randomString(16))
+        );
     }
 
     /**

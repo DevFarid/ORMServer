@@ -83,20 +83,11 @@ public class AppRepository {
      */
     public void decompose(DBPacket packet) throws SQLException {
         switch (packet.getCommandType()) {
-            case CREATE:
-                this.create(packet);
-                break;
             case SELECT:
                 this.select(packet);
                 break;
-            case INSERT:
-                this.insert(packet);
-                break;
-            case UPDATE:
-                this.update(packet);
-                break;
-            case DELETE:
-                this.delete(packet);
+            case ALTER_TABLE:
+                this.alter(packet);
                 break;
             default:
                 this.logger.warning("Unknown command type.");
@@ -114,6 +105,10 @@ public class AppRepository {
 
     }
 
+
+    private void alter(DBPacket packet) {
+    }
+  
     private void insert(DBPacket packet) throws SQLException {
         getDAO(packet.getTableName())
                 .createIfNotExists(new TestEntity("Jane Doe", 30, 60000.0f));
