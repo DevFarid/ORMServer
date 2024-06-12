@@ -3,8 +3,9 @@ package hive.commands;
 import hive.HiveClient;
 import hive.Server;
 import hive.console.Console;
-import hive.packets.AuthPacket;
-import hive.packets.MSGPacket;
+import hive.packets.child.Auth;
+import hive.packets.child.Message;
+import hive.packets.child.Post;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public enum CMDLoader {
                     }
                 };
                 chatMsg.setRunnableAction(() -> {
-                    ((HiveClient) chatMsg.getConsole()).sendPacket(new MSGPacket(String.join(" ", chatMsg.getParams())));
+                    ((HiveClient) chatMsg.getConsole()).sendPacket(new Message(String.join(" ", chatMsg.getParams())));
                 });
 
                 ConsoleCommand login = new ConsoleCommand(console, "login") {
@@ -37,11 +38,24 @@ public enum CMDLoader {
                 };
                 login.setRunnableAction(() -> {
                     HiveClient client = (HiveClient) login.getConsole();
-                    client.sendPacket(new AuthPacket(login.getParams().get(0), login.getParams().get(1)));
+                    client.sendPacket(new Auth(login.getParams().get(0), login.getParams().get(1)));
+                });
+
+                ConsoleCommand synchronize = new ConsoleCommand(console, "sync") {
+                    @Override
+                    public boolean requiresParams() {
+                        return false;
+                    }
+                };
+                synchronize.setRunnableAction(() -> {
+                    HiveClient client = (HiveClient) login.getConsole();
+                    Post post = new Post("db_synchronize");
+                    client.sendPacket(post);
                 });
 
                 commands.add(login);
                 commands.add(chatMsg);
+                commands.add(synchronize);
                 break;
 
             case SERVER:

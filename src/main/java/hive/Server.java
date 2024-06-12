@@ -4,9 +4,7 @@ import hive.commands.CMDLoader;
 import hive.database.DBConnection;
 import hive.database.DBEnv;
 import hive.console.Console;
-import hive.packets.AuthPacket;
-import hive.packets.DBPacket;
-import hive.packets.MSGPacket;
+import hive.packets.child.*;
 import hive.packets.Packet;
 import misc.Utils;
 
@@ -98,28 +96,42 @@ public class Server extends Console implements AutoCloseable {
                             if(receivedPacket != null) {
                                 switch (receivedPacket.getType()) {
                                     case MESSAGE -> {
-                                        MSGPacket msgPacket = (MSGPacket) receivedPacket;
-                                        getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), msgPacket.getMessage()));
+                                        Message message = (Message) receivedPacket;
+                                        getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), message.getMessage()));
                                     }
                                     case SQL -> {
                                         if(!this.authenticatedClients.contains(clientChannel)) {
-                                            send(clientChannel, new MSGPacket("You are not authenticated."));
+                                            send(clientChannel, new Message("You are not authenticated."));
                                             break;
                                         }
 
                                         getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
-                                        this.dbConn.decomposePacket((DBPacket) receivedPacket);
+                                        this.dbConn.decomposePacket((SQLacket) receivedPacket);
                                     }
                                     case AUTH -> {
                                         getLogger().info(String.format("[%s](AuthPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
-                                        AuthPacket authPacket = (AuthPacket) receivedPacket;
+                                        Auth auth = (Auth) receivedPacket;
 
-                                        if(authPacket.getHashedPass().equals(this.passphrase.get())) {
+                                        if(auth.getHashedPass().equals(this.passphrase.get())) {
                                             this.authenticatedClients.add(clientChannel);
                                             getLogger().info(String.format("Authenticated %s", clientChannel.getRemoteAddress()));
                                         } else {
                                             getLogger().info(String.format("Failed to authenticate %s", clientChannel.getRemoteAddress()));
                                         }
+                                    }
+                                    // received a post from client
+                                    case POST -> {
+                                        Post post = (Post) receivedPacket;
+                                        getLogger().info(String.format("[%s](POST): %s", clientChannel.getRemoteAddress(), post));
+                                        if (post.getCommand().equals("db_synchronize")) {
+                                            Response response = new Response();
+                                            // TODO: send all available table entities to the client along with their respective Java class.
+                                            send(clientChannel, response);
+                                        }
+                                    }
+                                    // received a response from client
+                                    case RESPONSE -> {
+
                                     }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
@@ -167,6 +179,7 @@ public class Server extends Console implements AutoCloseable {
         if(read == -1) {
             getLogger().info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
             this.connectedClients.remove(clientChannel);
+            this.authenticatedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
             return null;
@@ -228,7 +241,7 @@ public class Server extends Console implements AutoCloseable {
      * @param message the message to broadcast.
      */
     public void broadcastMessage(String message) {
-        this.sendToAll(new MSGPacket(message));
+        this.sendToAll(new Message(message));
         getLogger().info(String.format("Broadcasting: %s", message));
     }
 

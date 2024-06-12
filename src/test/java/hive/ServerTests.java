@@ -1,6 +1,8 @@
 package hive;
 import hive.database.DBEnv;
 import hive.packets.*;
+import hive.packets.child.Message;
+import hive.packets.child.SQLacket;
 import org.junit.jupiter.api.*;
 
 
@@ -186,15 +188,15 @@ public class ServerTests {
         final AtomicBoolean messageReceivedClient2 = new AtomicBoolean(false);
 
         clientRef1.get().addNetworkEventListener(event -> {
-            MSGPacket msgPacket = (MSGPacket) event.getPacket();
-            if (packetMessage.equals(msgPacket.getMessage())) {
+            Message message = (Message) event.getPacket();
+            if (packetMessage.equals(message.getMessage())) {
                 messageReceivedClient1.set(true);
             }
         });
 
         clientRef2.get().addNetworkEventListener(event -> {
-            MSGPacket msgPacket = (MSGPacket) event.getPacket();
-            if (packetMessage.equals(msgPacket.getMessage())) {
+            Message message = (Message) event.getPacket();
+            if (packetMessage.equals(message.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
@@ -256,18 +258,18 @@ public class ServerTests {
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         server.addNetworkEventListener(event -> {
-            MSGPacket msgPacket = (MSGPacket) event.getPacket();
-            if ("Hello Server from Client 1".equals(msgPacket.getMessage())) {
+            Message message = (Message) event.getPacket();
+            if ("Hello Server from Client 1".equals(message.getMessage())) {
                 messageReceivedClient1.set(true);
-            } else if("Hello Server from Client 2".equals(msgPacket.getMessage())) {
+            } else if("Hello Server from Client 2".equals(message.getMessage())) {
                 messageReceivedClient2.set(true);
             }
         });
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        clientRef1.get().sendPacket(new MSGPacket("Hello Server from Client 1"));
-        clientRef2.get().sendPacket(new MSGPacket("Hello Server from Client 2"));
+        clientRef1.get().sendPacket(new Message("Hello Server from Client 1"));
+        clientRef2.get().sendPacket(new Message("Hello Server from Client 2"));
 
 
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -313,7 +315,7 @@ public class ServerTests {
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        DBPacket packet = new DBPacket();
+        SQLacket packet = new SQLacket();
         clientRef.get().sendPacket(packet);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 

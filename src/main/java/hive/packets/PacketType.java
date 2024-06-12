@@ -5,5 +5,5 @@ package hive.packets;
  * Created by SixEyes on 04/07/2024.
  */
 public enum PacketType {
-    MESSAGE, SQL, AUTH
+    MESSAGE, SQL, AUTH, RESPONSE, POST
 }

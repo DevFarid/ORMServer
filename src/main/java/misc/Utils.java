@@ -1,6 +1,7 @@
 package misc;
 
 import hive.packets.*;
+import hive.packets.child.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,9 +22,11 @@ public class Utils {
         String[] parts = new String(data).split("\\|");
         PacketType type = PacketType.valueOf(parts[0]);
         return switch (type) {
-            case MESSAGE -> new MSGPacket(parts[1]);
-            case SQL -> new DBPacket();
-            case AUTH -> AuthPacket.of(parts[1], parts[2]);
+            case MESSAGE -> new Message(parts[1]);
+            case SQL -> new SQLacket();
+            case AUTH -> Auth.of(parts[1], parts[2]);
+            case POST -> new Post(parts[1]);
+            case RESPONSE -> new Response();
         };
     }
 

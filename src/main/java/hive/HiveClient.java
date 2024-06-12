@@ -18,7 +18,6 @@ import java.util.Iterator;
  * Created by SixEyes on 2024-04-07.
  */
 public class HiveClient extends Console {
-
     public HiveClient(int port) throws IOException {
         super(false, port);
         addCommands(CMDLoader.CLIENT.loadCommands(this));
@@ -61,6 +60,7 @@ public class HiveClient extends Console {
 
                             try {
                                 this.auth();
+                                this.synchronize();
                             } catch (IllegalArgumentException e) {
                                 getLogger().log(Level.SEVERE, "Error authenticating.", e);
                                 stop();
@@ -86,17 +86,8 @@ public class HiveClient extends Console {
         }
     }
 
-    // method to send message to server
-    public void sendPacket(Packet p) {
-        try {
-            ByteBuffer buffer = ByteBuffer.wrap(p.serialize());
+    private void synchronize() {
 
-            while (buffer.hasRemaining()) {
-                ((SocketChannel) getChannel()).write(buffer);
-            }
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "error sending a packet!", e);
-        }
     }
 
     protected Packet read() throws IOException {
@@ -115,6 +106,19 @@ public class HiveClient extends Console {
         getLogger().info(String.format("Received packet from server: %s", packet));
 
         return packet;
+    }
+
+    // method to send message to server
+    public void sendPacket(Packet p) {
+        try {
+            ByteBuffer buffer = ByteBuffer.wrap(p.serialize());
+
+            while (buffer.hasRemaining()) {
+                ((SocketChannel) getChannel()).write(buffer);
+            }
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "error sending a packet!", e);
+        }
     }
 
     /**

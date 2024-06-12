@@ -4,7 +4,7 @@ import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.jdbc.spring.DaoFactory;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
-import hive.packets.DBPacket;
+import hive.packets.child.SQLacket;
 import misc.ReflectionUtil;
 
 import java.io.File;
@@ -79,30 +79,30 @@ public class AppRepository {
      * type of packet it is, so that the operation can be performed accordingly.
      * @param packet packet to decompose.
      */
-    public void decompose(DBPacket packet) throws SQLException {
+    public void decompose(SQLacket packet) throws SQLException {
 
     }
 
-    private void create(DBPacket packet) throws SQLException {
+    private void create(SQLacket packet) throws SQLException {
 
     }
 
-    private void select(DBPacket packet) {
+    private void select(SQLacket packet) {
 
     }
 
-    private void alter(DBPacket packet) {
+    private void alter(SQLacket packet) {
 
     }
   
-    private void insert(DBPacket packet) throws SQLException {
+    private void insert(SQLacket packet) throws SQLException {
 
     }
 
-    private void update(DBPacket packet) throws SQLException {
+    private void update(SQLacket packet) throws SQLException {
     }
 
-    private void delete(DBPacket packet) {
+    private void delete(SQLacket packet) {
         
     }
 

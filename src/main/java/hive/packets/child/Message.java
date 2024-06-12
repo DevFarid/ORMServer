@@ -1,13 +1,16 @@
-package hive.packets;
+package hive.packets.child;
+
+import hive.packets.Packet;
+import hive.packets.PacketType;
 
 /**
  * Represents a packet for sending messages between server & client.
  * Created by SixEyes on 06/03/2024.
  */
-public class MSGPacket extends Packet {
+public class Message extends Packet {
     private final String message;
 
-    public MSGPacket(String message) {
+    public Message(String message) {
         super(PacketType.MESSAGE);
         this.message = message;
     }
