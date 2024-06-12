@@ -2,13 +2,10 @@ package hive.database;
 
 import com.j256.ormlite.jdbc.JdbcConnectionSource;
 import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
-import com.j256.ormlite.jdbc.db.SqliteDatabaseType;
 import com.j256.ormlite.support.ConnectionSource;
 import hive.packets.DBPacket;
-import hive.packets.Packet;
 import misc.Utils;
 
-import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;

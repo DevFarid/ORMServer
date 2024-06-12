@@ -1,6 +1,5 @@
 package hive.sql.cmdbuilder;
 
-import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.SqlType;
 import hive.sql.QueryBuilder;
 
