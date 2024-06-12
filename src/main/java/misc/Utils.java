@@ -1,7 +1,6 @@
 package misc;
 
 import hive.packets.*;
-import hive.sql.cmdbuilder.SQLCommandType;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,31 +20,11 @@ public class Utils {
     public static Packet deserializePacket(byte[] data) {
         String[] parts = new String(data).split("\\|");
         PacketType type = PacketType.valueOf(parts[0]);
-        switch (type) {
-            case MESSAGE:
-                return new MSGPacket(parts[1]);
-            case SQL:
-                DBPacket packet = new DBPacket(parts[2], SQLCommandType.valueOf(parts[1]));
-                boolean hasColumns = parts[3].isEmpty();
-
-                if (!hasColumns) {
-                    String[] columns = parts[3].split(",");
-                    for (String column : columns) {
-                        String[] keyValue = column.split("=");
-                        packet.addColumn(keyValue[0], keyValue[1]);
-                    }
-                }
-
-                if (parts.length > 4) {
-                    packet.setCondition(parts[4]);
-                }
-
-                return packet;
-            case AUTH:
-                return AuthPacket.of(parts[1], parts[2]);
-            default:
-                throw new IllegalArgumentException("Invalid packet type: " + type);
-        }
+        return switch (type) {
+            case MESSAGE -> new MSGPacket(parts[1]);
+            case SQL -> new DBPacket();
+            case AUTH -> AuthPacket.of(parts[1], parts[2]);
+        };
     }
 
     /**

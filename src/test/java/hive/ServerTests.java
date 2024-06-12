@@ -1,7 +1,6 @@
 package hive;
 import hive.database.DBEnv;
 import hive.packets.*;
-import hive.sql.cmdbuilder.SQLCommandType;
 import org.junit.jupiter.api.*;
 
 
@@ -314,10 +313,7 @@ public class ServerTests {
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        DBPacket packet = new DBPacket("users", SQLCommandType.SELECT);
-        packet.addColumn("id", "1");
-        packet.addColumn("first_name", "JOHN");
-        packet.setCondition("WHERE last_name = DOE");
+        DBPacket packet = new DBPacket();
         clientRef.get().sendPacket(packet);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 

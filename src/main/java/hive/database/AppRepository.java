@@ -2,10 +2,8 @@ package hive.database;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.jdbc.spring.DaoFactory;
-import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
-import hive.database.entities.TestEntity;
 import hive.packets.DBPacket;
 import misc.ReflectionUtil;
 
@@ -82,36 +80,23 @@ public class AppRepository {
      * @param packet packet to decompose.
      */
     public void decompose(DBPacket packet) throws SQLException {
-        switch (packet.getCommandType()) {
-            case SELECT:
-                this.select(packet);
-                break;
-            case ALTER_TABLE:
-                this.alter(packet);
-                break;
-            default:
-                this.logger.warning("Unknown command type.");
-        }
+
     }
 
     private void create(DBPacket packet) throws SQLException {
-        getDAO(packet.getTableName())
-                .create(new TestEntity("John Doe", 25, 50000.0f));
+
     }
 
     private void select(DBPacket packet) {
-        QueryBuilder<Object, Integer> queryBuilder = getDAO(packet.getTableName())
-                .queryBuilder();
 
     }
 
-
     private void alter(DBPacket packet) {
+
     }
   
     private void insert(DBPacket packet) throws SQLException {
-        getDAO(packet.getTableName())
-                .createIfNotExists(new TestEntity("Jane Doe", 30, 60000.0f));
+
     }
 
     private void update(DBPacket packet) throws SQLException {
