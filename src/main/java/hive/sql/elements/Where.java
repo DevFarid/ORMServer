@@ -1,5 +1,7 @@
 package hive.sql.elements;
 
+import misc.Utils;
+
 /**
  * This class is used to build SQL queries.
  * Created by SixEyes on 06/07/2024.
@@ -86,7 +88,7 @@ public class Where {
     @Override
     public String toString() {
         if(value != null)
-            return String.format("%s %s %s", column, op.getSymbol(), value);
+            return String.format("%s %s %s", column, op.getSymbol(), Utils.sqlFormatValue(value));
         else return String.format("%s %s", column, op.getSymbol());
     }
 

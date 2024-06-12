@@ -33,7 +33,7 @@ public class SelectTests {
                 .table("TestEntity")
                 .where("id", ComparisonOp.EQUALS, "ec0a4128-557f-42f2-b5ac-7efbb3ceee1d")
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE id = ec0a4128-557f-42f2-b5ac-7efbb3ceee1d;", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE id = 'ec0a4128-557f-42f2-b5ac-7efbb3ceee1d';", query);
         System.out.println(query);
     }
 
@@ -46,7 +46,7 @@ public class SelectTests {
                 .table("TestEntity")
                 .where("name", ComparisonOp.EQUALS, "John")
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John;", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = 'John';", query);
         System.out.println(query);
     }
 
@@ -59,7 +59,7 @@ public class SelectTests {
                 .table("TestEntity")
                 .where("name", ComparisonOp.EQUALS, "John")
                 .toString();
-        Assertions.assertEquals("SELECT id, age FROM TestEntity WHERE name = John;", query);
+        Assertions.assertEquals("SELECT id, age FROM TestEntity WHERE name = 'John';", query);
         System.out.println(query);
     }
 
@@ -73,7 +73,7 @@ public class SelectTests {
                 .where(Where.of("name", ComparisonOp.EQUALS, "John"), ComparisonOp.AND)
                 .where(Where.of("age", ComparisonOp.GREATER_THAN, "18"), ComparisonOp.AND)
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John AND age > 18;", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = 'John' AND age > 18;", query);
         System.out.println(query);
     }
 
@@ -86,9 +86,9 @@ public class SelectTests {
                 .table("TestEntity")
                 .where(Where.of("name", ComparisonOp.EQUALS, "John"), ComparisonOp.AND)
                 .where(Where.of("age", ComparisonOp.GREATER_THAN, "18"), ComparisonOp.OR)
-                .where(Where.of("salary", ComparisonOp.GREATER_THAN, "10000"), null)
+                .where(Where.of("salary", ComparisonOp.GREATER_THAN, "10000.5"), null)
                 .toString();
-        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = John AND age > 18 OR salary > 10000;", query);
+        Assertions.assertEquals("SELECT id FROM TestEntity WHERE name = 'John' AND age > 18 OR salary > 10000.5;", query);
         System.out.println(query);
     }
 

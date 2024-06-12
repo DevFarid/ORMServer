@@ -2,6 +2,7 @@ package hive.sql.cmdbuilder;
 
 import hive.sql.*;
 import hive.sql.elements.*;
+import misc.Utils;
 
 /**
  * Created by SixEyes on 06/08/2024.
@@ -102,6 +103,9 @@ public class SelectBuilder extends QueryBuilder {
      */
     @Override
     public String toString() {
+        Utils.strNNorNE(getTable());
+        Utils.strArrayNNorNE(getColumns());
+
         StringBuilder query = new StringBuilder();
         query.append(getCommandType().getSQL());
         if(this.isDistinct) {

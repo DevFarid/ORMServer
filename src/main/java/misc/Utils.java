@@ -105,4 +105,17 @@ public class Utils {
             throw new IllegalArgumentException("Arrays must be of the same length");
         }
     }
+
+    /**
+     * Formats a string for SQL usage.
+     * @param value the incoming value for formatting.
+     * @return the formatted string
+     */
+    public static String sqlFormatValue(String value) {
+        boolean isString = value.chars().allMatch(Character::isLetter);
+        boolean isUUID = value.chars().anyMatch(Character::isDigit) && value.chars().anyMatch(c -> c == '-');
+        if(isString || isUUID)
+            return String.format("'%s'", value);
+        else return value;
+    }
 }

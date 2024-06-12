@@ -1,8 +1,8 @@
 package hive.sql.cmdbuilder;
 
-import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.SqlType;
 import hive.sql.QueryBuilder;
+import misc.Utils;
 
 public class AlterBuilder extends QueryBuilder {
     private String cursor;
@@ -65,6 +65,9 @@ public class AlterBuilder extends QueryBuilder {
      */
     @Override
     public String toString() {
+        Utils.strNNorNE(getTable());
+        Utils.strNNorNE(this.cursor);
+        Utils.strArrayNNorNE(getColumns());
         return String.format("%s %s %s;", getCommandType().getSQL(), getTable(), this.cursor);
     }
 
