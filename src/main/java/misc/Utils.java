@@ -88,6 +88,12 @@ public class Utils {
         strArrayParameterNotEmpty(strArray);
     }
 
+    public static void mustMatch(String[] arr1, int length) {
+        if(arr1.length != length) {
+            throw new IllegalArgumentException("Arrays must be of length: " + length + ", but was " + arr1.length);
+        }
+    }
+
     public static void mustMatch(String[] arr1, String[] arr2) {
         if(arr1.length != arr2.length) {
             throw new IllegalArgumentException("Arrays must be of the same length");
