@@ -75,6 +75,11 @@ public class HiveClient extends Console {
                         Packet packet = this.read();
                         if (packet != null) {
                             notifyListeners(packet, getLogger());
+                            switch (packet.getType()) {
+                                case MESSAGE -> getLogger().info(String.format("Message from server: %s", packet));
+                                case RESPONSE -> getLogger().info(String.format("Response from server: %s", packet));
+                                case FILE -> getLogger().info(String.format("File from server: %s", packet));
+                            }
                         }
                     }
                 }

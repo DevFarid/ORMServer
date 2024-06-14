@@ -7,6 +7,9 @@ import org.junit.jupiter.api.*;
 
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -30,7 +33,7 @@ public class ServerTests {
     // Test for server reachability and that channels are open.
     @Test
     @Order(1)
-    @DisplayName("test server is open and reachable.")
+    @DisplayName("test-1: server is open and reachable.")
     public void testServerOpen() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         Server server = new Server(Environment.DEV,generateRandomPort());
@@ -44,7 +47,7 @@ public class ServerTests {
     // Test for reachability once server is closed.
     @Test
     @Order(2)
-    @DisplayName("test server is unreachable once closed.")
+    @DisplayName("test-2: server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
         final Server server = new Server(Environment.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
@@ -61,7 +64,7 @@ public class ServerTests {
     // Test server is in operation mode.
     @Test
     @Order(3)
-    @DisplayName("test server is reachable & running for operations.")
+    @DisplayName("test-3: server is reachable & running for operations.")
     public void testServerRunning() throws Exception {
         final Server server = new Server(Environment.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
@@ -79,7 +82,7 @@ public class ServerTests {
     // Test server receive Client Connection.
     @Test
     @Order(4)
-    @DisplayName("test client is connected to the server.")
+    @DisplayName("test-4: client is connected to the server.")
     public void testServerReceiveClientConnection() throws Exception {
         int port = generateRandomPort();
         final Server server = new Server(Environment.DEV,port);
@@ -109,7 +112,7 @@ public class ServerTests {
     //Test server receiving multiple client connections
     @Test
     @Order(5)
-    @DisplayName("test server receives multiple client connections.")
+    @DisplayName("test-5: server receives multiple client connections.")
     public void testServerReceiveMultipleClientConnections() throws Exception {
         int port = generateRandomPort();
         final Server server = new Server(Environment.DEV,port);
@@ -151,7 +154,7 @@ public class ServerTests {
     //Test server sending messages to all clients
     @Test
     @Order(6)
-    @DisplayName("test server sends messages to all clients.")
+    @DisplayName("test-6: server sends messages to all clients.")
     public void testServerSendMessagesToAllClients() throws Exception {
         int port = generateRandomPort();
         final Server server = new Server(Environment.DEV,port);
@@ -221,7 +224,7 @@ public class ServerTests {
     // Test server receiving a packet from two clients.
     @Test
     @Order(7)
-    @DisplayName("test server receiving a packet from a connected client.")
+    @DisplayName("test-7: server receiving a packet from a connected client.")
     public void testServerReceivePacketFromConnectedClient() throws Exception {
         int port = generateRandomPort();
         final Server server = new Server(Environment.DEV,port);
@@ -287,13 +290,13 @@ public class ServerTests {
     // test server receiving a DBPacket from a single client
     @Test
     @Order(8)
-    @DisplayName("test server receiving a DBPacket from a connected client.")
+    @DisplayName("test-8: server receiving a DBPacket from a connected client.")
     public void testDBPacket() throws Exception {
         int port = generateRandomPort();
         final Server server = new Server(Environment.DEV, port);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(4);
-        final ExecutorService executor = Executors.newFixedThreadPool(3);
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
 
         executor.submit(server::start);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -326,4 +329,48 @@ public class ServerTests {
         executor.close();
     }
 
+    // Test client receiving a file from server
+    @Test
+    @Order(9)
+    @DisplayName("test-9: server client a file from server.")
+    public void testFilePacket() throws Exception {
+        int port = generateRandomPort();
+        final Server server = new Server(Environment.DEV, port);
+        final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(4);
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        executor.submit(() -> {
+            try {
+                clientRef.set(new HiveClient(port));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            clientRef.get().start();
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        final AtomicBoolean packetReceived = new AtomicBoolean(false);
+        server.addNetworkEventListener(event -> {
+            if(event.getPacket().getType() == PacketType.FILE) {
+                packetReceived.set(true);
+            }
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        Path filePath = Paths.get("").toAbsolutePath().resolve("src/test/resources/test.txt");
+        byte[] fileBytes = Files.readAllBytes(filePath);
+        hive.packets.child.File filePacket = new hive.packets.child.File(fileBytes);
+        clientRef.get().sendPacket(filePacket);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        Assertions.assertTrue(packetReceived.get(), "Server did not receive the expected FilePacket from the client.");
+
+        clientRef.get().stop();
+        server.close();
+        executor.close();
+    }
 }

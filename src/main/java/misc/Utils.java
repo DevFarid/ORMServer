@@ -20,13 +20,26 @@ public class Utils {
      */
     public static Packet deserializePacket(byte[] data) {
         String[] parts = new String(data).split("\\|");
-        PacketType type = PacketType.valueOf(parts[0]);
+        if(parts.length == 0) return null;
+        PacketType type;
+
+        try {
+            type = PacketType.valueOf(parts[0]);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+
         return switch (type) {
             case MESSAGE -> new Message(parts[1]);
             case SQL -> new SQLacket();
             case AUTH -> Auth.of(parts[1], parts[2]);
             case POST -> new Post(parts[1]);
             case RESPONSE -> new Response();
+            case FILE -> {
+                byte[] fileBytes = new byte[data.length - parts[0].length() - 1];
+                System.arraycopy(data, parts[0].length() + 1, fileBytes, 0, fileBytes.length);
+                yield new hive.packets.child.File(fileBytes);
+            }
         };
     }
 
@@ -112,7 +125,6 @@ public class Utils {
 
     /**
      * Source: <a href="https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java">...</a>
-     *
      * Input: Byte array
      * Output: Hexadecimal string corresponding to input (with leading zeroes)
      *

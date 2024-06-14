@@ -121,6 +121,7 @@ public class Server extends Console implements AutoCloseable {
                                     case POST -> {
                                         Post post = (Post) receivedPacket;
                                         getLogger().info(String.format("[%s](POST): %s", clientChannel.getRemoteAddress(), post));
+                                        // TODO: Implement a similar system like Console and ConsoleCommand for future post commands.
                                         if (post.getCommand().equals("db_synchronize")) {
                                             Response response = new Response();
                                             // TODO: send all available table entities to the client along with their respective Java class.
@@ -130,6 +131,11 @@ public class Server extends Console implements AutoCloseable {
                                     // received a response from client
                                     case RESPONSE -> {
 
+                                    }
+                                    case FILE -> {
+                                        hive.packets.child.File file = (hive.packets.child.File) receivedPacket;
+                                        getLogger().info(String.format("[%s](FilePacket): %s", clientChannel.getRemoteAddress(), file));
+                                        // TODO: write the bytes to an actual file.
                                     }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
