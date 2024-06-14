@@ -26,10 +26,8 @@ import java.util.logging.Level;
  */
 public class Server extends Console implements AutoCloseable {
 
-    private final Set<SocketChannel> connectedClients = new HashSet<>();
-    private final Set<SocketChannel> authenticatedClients = new HashSet<>();
-
-    private final Database dbConn;
+    private final Map<SocketChannel, Boolean> connectedClients = new HashMap<>();
+    private final Database database;
     private final AtomicReference<String> passphrase = new AtomicReference<>();
 
     public Server(Environment env, int port) throws IOException, SQLException, IllegalArgumentException {
@@ -37,7 +35,7 @@ public class Server extends Console implements AutoCloseable {
         addCommands(CMDLoader.SERVER.loadCommands(this));
 
         try {
-            this.dbConn = new Database(env);
+            this.database = new Database(env);
         } catch (IllegalArgumentException e) {
             getLogger().log(Level.SEVERE, "Error authenticating.", e);
             throw e;
@@ -100,20 +98,20 @@ public class Server extends Console implements AutoCloseable {
                                         getLogger().info(String.format("[%s](MSGPacket): %s", clientChannel.getRemoteAddress(), message.getMessage()));
                                     }
                                     case SQL -> {
-                                        if(!this.authenticatedClients.contains(clientChannel)) {
+                                        if(!this.connectedClients.get(clientChannel)) {
                                             send(clientChannel, new Message("You are not authenticated."));
                                             break;
                                         }
 
                                         getLogger().info(String.format("[%s](DBPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
-                                        this.dbConn.decomposePacket((SQLacket) receivedPacket);
+                                        this.database.decomposePacket((SQLacket) receivedPacket);
                                     }
                                     case AUTH -> {
                                         getLogger().info(String.format("[%s](AuthPacket): %s", clientChannel.getRemoteAddress(), receivedPacket));
                                         Auth auth = (Auth) receivedPacket;
 
                                         if(auth.getHashedPass().equals(this.passphrase.get())) {
-                                            this.authenticatedClients.add(clientChannel);
+                                            this.connectedClients.remove(clientChannel, true);
                                             getLogger().info(String.format("Authenticated %s", clientChannel.getRemoteAddress()));
                                         } else {
                                             getLogger().info(String.format("Failed to authenticate %s", clientChannel.getRemoteAddress()));
@@ -161,7 +159,7 @@ public class Server extends Console implements AutoCloseable {
         SocketChannel clientChannel = serverChannel.accept();
         clientChannel.configureBlocking(false);
         clientChannel.register(getSelector(), SelectionKey.OP_READ);
-        this.connectedClients.add(clientChannel);
+        this.connectedClients.put(clientChannel, false);
         getLogger().info(String.format("[+]: %s", clientChannel.getRemoteAddress()));
     }
 
@@ -180,7 +178,6 @@ public class Server extends Console implements AutoCloseable {
         if(bytesRead == -1) {
             getLogger().info(String.format("[-]: %s", clientChannel.getRemoteAddress()));
             this.connectedClients.remove(clientChannel);
-            this.authenticatedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
             return null;
@@ -247,7 +244,7 @@ public class Server extends Console implements AutoCloseable {
      * @param packet the packet to send.
      */
     public void sendToAll(Packet packet) {
-        this.connectedClients.forEach(client -> {
+        this.connectedClients.forEach((client, _) -> {
             try {
                 send(client, packet);
             } catch (IOException e) {
@@ -269,10 +266,10 @@ public class Server extends Console implements AutoCloseable {
 
     /**
      * Get a list of connected clients.
-     * @return a list of connected clients.
+     * @return a set of connected clients.
      */
     public Set<SocketChannel> getConnectedClients() {
-        return this.connectedClients;
+        return this.connectedClients.keySet();
     }
 
     /**
@@ -284,8 +281,8 @@ public class Server extends Console implements AutoCloseable {
         boolean[] canInteract = {
                 this.isOpen(),
                 this.isRunning(),
-                this.dbConn.getConnectionSource() != null,
-                this.dbConn.getConnectionSource().isOpen(this.dbConn.getEnv().getDatabaseUrl())
+                this.database.getConnectionSource() != null,
+                this.database.getConnectionSource().isOpen(this.database.getEnvironment().getDatabaseUrl())
         };
 
         for(boolean can : canInteract) {

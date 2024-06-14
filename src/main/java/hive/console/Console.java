@@ -74,7 +74,13 @@ public abstract class Console extends NetworkEventNotifier {
                                             }
                                             runCommand(command);
                                         },
-                                        () -> logger.log(Level.WARNING, "Command not found: " + cmd)
+                                        () -> {
+                                            if(this.getChannel() instanceof SocketChannel) {
+                                                runCommandIf("chat", cmdLineArg);
+                                            } else {
+                                                logger.log(Level.WARNING, "Command not found: " + cmd);
+                                            }
+                                        }
                                 );
                     }
                 }

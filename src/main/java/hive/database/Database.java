@@ -17,14 +17,14 @@ import java.util.logging.Logger;
  */
 public class Database {
     private final Logger logger = Logger.getLogger(Database.class.getName());
+    private final Environment environment;
     private final JdbcConnectionSource connectionSource;
     private final Repository repository;
-    private final Environment env;
     private final static String username = "admin";
 
-    public Database(Environment env) throws SQLException, IllegalArgumentException {
-        this.env = env;
-        this.connectionSource = new JdbcPooledConnectionSource(this.env.getDatabaseUrl());
+    public Database(Environment environment) throws SQLException, IllegalArgumentException {
+        this.environment = environment;
+        this.connectionSource = new JdbcPooledConnectionSource(this.environment.getDatabaseUrl());
         this.auth();
         this.repository = new Repository(this.connectionSource);
     }
@@ -64,8 +64,8 @@ public class Database {
      * Get the database environment.
      * @return database environment enum.
      */
-    public Environment getEnv() {
-        return this.env;
+    public Environment getEnvironment() {
+        return this.environment;
     }
 
     /**
