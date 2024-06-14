@@ -129,9 +129,7 @@ public class Server extends Console implements AutoCloseable {
                                         }
                                     }
                                     // received a response from client
-                                    case RESPONSE -> {
-
-                                    }
+                                    case RESPONSE -> {}
                                     case FILE -> {
                                         hive.packets.child.File file = (hive.packets.child.File) receivedPacket;
                                         getLogger().info(String.format("[%s](FilePacket): %s", clientChannel.getRemoteAddress(), file));
