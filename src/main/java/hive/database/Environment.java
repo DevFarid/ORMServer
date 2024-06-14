@@ -5,7 +5,7 @@ package hive.database;
  * Each environment has a different database URL.
  * Created by SixEyes on 06/01/2024.
  */
-public enum DBEnv {
+public enum Environment {
     DEV, BETA, PROD, LOSSLESS;
 
     public String getDatabaseUrl() {

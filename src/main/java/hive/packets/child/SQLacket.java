@@ -3,6 +3,8 @@ package hive.packets.child;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 
+import java.nio.ByteBuffer;
+
 /**
  * Represents a packet for SQL database operations.
  * Created by SixEyes on 06/03/2024.
@@ -14,11 +16,12 @@ public class SQLacket extends Packet {
         super(PacketType.SQL);
     }
 
-
-
     @Override
     public byte[] serialize() {
-        return String.format("%s|", this.getType()).getBytes();
+        byte[] data = String.format("%s|", this.getType()).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
+        buffer.putInt(data.length).put(data);
+        return buffer.array();
     }
 
     @Override

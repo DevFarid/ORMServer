@@ -4,6 +4,8 @@ import hive.packets.Packet;
 import hive.packets.PacketType;
 import misc.Utils;
 
+import java.nio.ByteBuffer;
+
 /**
  * AuthPacket is a packet that is sent to the server to authenticate the client.
  * Created by SixEyes on 06/09/2024.
@@ -43,7 +45,10 @@ public class Auth extends Packet {
 
     @Override
     public byte[] serialize() {
-        return String.format("%s|%s|%s", this.getType(), this.username, this.hashedPass).getBytes();
+        byte[] data = String.format("%s|%s|%s", this.getType(), this.username, this.hashedPass).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
+        buffer.putInt(data.length).put(data);
+        return buffer.array();
     }
 
     @Override

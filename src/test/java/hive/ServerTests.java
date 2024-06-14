@@ -1,5 +1,5 @@
 package hive;
-import hive.database.DBEnv;
+import hive.database.Environment;
 import hive.packets.*;
 import hive.packets.child.Message;
 import hive.packets.child.SQLacket;
@@ -33,7 +33,7 @@ public class ServerTests {
     @DisplayName("test server is open and reachable.")
     public void testServerOpen() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        Server server = new Server(DBEnv.DEV,generateRandomPort());
+        Server server = new Server(Environment.DEV,generateRandomPort());
 
         Assertions.assertTrue(server.isOpen());
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
@@ -46,7 +46,7 @@ public class ServerTests {
     @Order(2)
     @DisplayName("test server is unreachable once closed.")
     public void testServerUnreachable() throws Exception {
-        final Server server = new Server(DBEnv.DEV,generateRandomPort());
+        final Server server = new Server(Environment.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(server::start);
@@ -63,7 +63,7 @@ public class ServerTests {
     @Order(3)
     @DisplayName("test server is reachable & running for operations.")
     public void testServerRunning() throws Exception {
-        final Server server = new Server(DBEnv.DEV,generateRandomPort());
+        final Server server = new Server(Environment.DEV,generateRandomPort());
         final CountDownLatch latch = new CountDownLatch(1);
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         
@@ -82,7 +82,7 @@ public class ServerTests {
     @DisplayName("test client is connected to the server.")
     public void testServerReceiveClientConnection() throws Exception {
         int port = generateRandomPort();
-        final Server server = new Server(DBEnv.DEV,port);
+        final Server server = new Server(Environment.DEV,port);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -112,7 +112,7 @@ public class ServerTests {
     @DisplayName("test server receives multiple client connections.")
     public void testServerReceiveMultipleClientConnections() throws Exception {
         int port = generateRandomPort();
-        final Server server = new Server(DBEnv.DEV,port);
+        final Server server = new Server(Environment.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
@@ -154,7 +154,7 @@ public class ServerTests {
     @DisplayName("test server sends messages to all clients.")
     public void testServerSendMessagesToAllClients() throws Exception {
         int port = generateRandomPort();
-        final Server server = new Server(DBEnv.DEV,port);
+        final Server server = new Server(Environment.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(4);
@@ -224,7 +224,7 @@ public class ServerTests {
     @DisplayName("test server receiving a packet from a connected client.")
     public void testServerReceivePacketFromConnectedClient() throws Exception {
         int port = generateRandomPort();
-        final Server server = new Server(DBEnv.DEV,port);
+        final Server server = new Server(Environment.DEV,port);
         final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
         final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
 
@@ -290,7 +290,7 @@ public class ServerTests {
     @DisplayName("test server receiving a DBPacket from a connected client.")
     public void testDBPacket() throws Exception {
         int port = generateRandomPort();
-        final Server server = new Server(DBEnv.DEV, port);
+        final Server server = new Server(Environment.DEV, port);
         final AtomicReference<HiveClient> clientRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(4);
         final ExecutorService executor = Executors.newFixedThreadPool(3);

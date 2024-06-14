@@ -3,6 +3,8 @@ package hive.packets.child;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 
+import java.nio.ByteBuffer;
+
 /**
  * A post is an act of sending an action to a receiver.
  * Created by SixEyes on 06/11/24.
@@ -22,8 +24,10 @@ public class Post extends Packet {
 
     @Override
     public byte[] serialize() {
-        return String.format("%s|%s", this.getType(), this.getCommand())
-                .getBytes();
+        byte[] data = String.format("%s|%s", this.getType(), this.getCommand()).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
+        buffer.putInt(data.length).put(data);
+        return buffer.array();
     }
 
     @Override

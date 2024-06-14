@@ -15,18 +15,18 @@ import java.util.logging.Logger;
  * The repository is used to interact with the database in an ORM/DAO manner.
  * Created by SixEyes on 2024-06-01.
  */
-public class DBConnection {
-    private final Logger logger = Logger.getLogger(DBConnection.class.getName());
+public class Database {
+    private final Logger logger = Logger.getLogger(Database.class.getName());
     private final JdbcConnectionSource connectionSource;
-    private final AppRepository appRepository;
-    private final DBEnv env;
+    private final Repository repository;
+    private final Environment env;
     private final static String username = "admin";
 
-    public DBConnection(DBEnv env) throws SQLException, IllegalArgumentException {
+    public Database(Environment env) throws SQLException, IllegalArgumentException {
         this.env = env;
         this.connectionSource = new JdbcPooledConnectionSource(this.env.getDatabaseUrl());
         this.auth();
-        this.appRepository = new AppRepository(this.connectionSource);
+        this.repository = new Repository(this.connectionSource);
     }
 
     private void auth() throws IllegalArgumentException {
@@ -48,8 +48,8 @@ public class DBConnection {
      * Get the app repository.
      * @return app repository instance.
      */
-    public AppRepository getAppRepository() {
-        return this.appRepository;
+    public Repository getAppRepository() {
+        return this.repository;
     }
 
     /**
@@ -57,14 +57,14 @@ public class DBConnection {
      * @param packet packet to decompose.
      */
     public void decomposePacket(SQLacket packet) throws SQLException {
-        this.appRepository.decompose(packet);
+        this.repository.decompose(packet);
     }
 
     /**
      * Get the database environment.
      * @return database environment enum.
      */
-    public DBEnv getEnv() {
+    public Environment getEnv() {
         return this.env;
     }
 

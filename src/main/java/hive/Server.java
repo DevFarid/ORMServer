@@ -1,8 +1,8 @@
 package hive;
 
 import hive.commands.CMDLoader;
-import hive.database.DBConnection;
-import hive.database.DBEnv;
+import hive.database.Database;
+import hive.database.Environment;
 import hive.console.Console;
 import hive.packets.child.*;
 import hive.packets.Packet;
@@ -29,15 +29,15 @@ public class Server extends Console implements AutoCloseable {
     private final Set<SocketChannel> connectedClients = new HashSet<>();
     private final Set<SocketChannel> authenticatedClients = new HashSet<>();
 
-    private final DBConnection dbConn;
+    private final Database dbConn;
     private final AtomicReference<String> passphrase = new AtomicReference<>();
 
-    public Server(DBEnv env, int port) throws IOException, SQLException, IllegalArgumentException {
+    public Server(Environment env, int port) throws IOException, SQLException, IllegalArgumentException {
         super(true, port);
         addCommands(CMDLoader.SERVER.loadCommands(this));
 
         try {
-            this.dbConn = new DBConnection(env);
+            this.dbConn = new Database(env);
         } catch (IllegalArgumentException e) {
             getLogger().log(Level.SEVERE, "Error authenticating.", e);
             throw e;
@@ -162,7 +162,7 @@ public class Server extends Console implements AutoCloseable {
         clientChannel.configureBlocking(false);
         clientChannel.register(getSelector(), SelectionKey.OP_READ);
         this.connectedClients.add(clientChannel);
-        getLogger().info(String.format("Accepted connection from %s", clientChannel.getRemoteAddress()));
+        getLogger().info(String.format("[+]: %s", clientChannel.getRemoteAddress()));
     }
 
     /**
@@ -173,21 +173,42 @@ public class Server extends Console implements AutoCloseable {
     public Packet read(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         if(clientChannel == null) { return null; }
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int read = clientChannel.read(buffer);
 
-        if(read == -1) {
-            getLogger().info(String.format("Connection closed by %s", clientChannel.getRemoteAddress()));
+        ByteBuffer lengthBuffer = ByteBuffer.allocate(Integer.BYTES);
+        int bytesRead = clientChannel.read(lengthBuffer);
+
+        if(bytesRead == -1) {
+            getLogger().info(String.format("[-]: %s", clientChannel.getRemoteAddress()));
             this.connectedClients.remove(clientChannel);
             this.authenticatedClients.remove(clientChannel);
             key.cancel();
             clientChannel.close();
             return null;
         }
-        
-        buffer.flip();
-        byte[] data = new byte[buffer.remaining()];
-        buffer.get(data);
+
+        if(bytesRead < Integer.BYTES) {
+            getLogger().warning(String.format("[!] Packet length byte data was not sent properly from %s", clientChannel.getRemoteAddress()));
+            return null;
+        }
+
+        lengthBuffer.flip();
+        int length = lengthBuffer.getInt();
+
+        ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+        bytesRead = clientChannel.read(dataBuffer);
+
+        if (bytesRead == -1) {
+            getLogger().info(String.format("[!] Packet data byte was not sent properly from %s.", clientChannel.getRemoteAddress()));
+            return null;
+        }
+
+        while(bytesRead < length) {
+            bytesRead += clientChannel.read(dataBuffer);
+        }
+
+        dataBuffer.flip();
+        byte[] data = new byte[dataBuffer.remaining()];
+        dataBuffer.get(data);
         return Utils.deserializePacket(data);
     }
 
@@ -241,8 +262,9 @@ public class Server extends Console implements AutoCloseable {
      * @param message the message to broadcast.
      */
     public void broadcastMessage(String message) {
-        this.sendToAll(new Message(message));
-        getLogger().info(String.format("Broadcasting: %s", message));
+        Message m = new Message(message);
+        this.sendToAll(m);
+        getLogger().info(String.format("Broadcasting: %s", m));
     }
 
     /**
@@ -297,7 +319,7 @@ public class Server extends Console implements AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
-        try(Server server = new Server(DBEnv.DEV, 25565)) {
+        try(Server server = new Server(Environment.DEV, 25565)) {
             server.start();
         } catch(IOException e) {
             System.out.printf(

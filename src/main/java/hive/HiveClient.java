@@ -91,17 +91,34 @@ public class HiveClient extends Console {
     }
 
     protected Packet read() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int read = ((SocketChannel) this.getChannel()).read(buffer);
-        if (read == -1) {
-            getLogger().info("Server has closed the connection.");
+
+        ByteBuffer lengthBuffer = ByteBuffer.allocate(Integer.BYTES);
+        int bytesRead = ((SocketChannel) this.getChannel()).read(lengthBuffer);
+        if (bytesRead == -1) {
+            getLogger().info("[!] Server has closed the connection.");
             this.getChannel().close();
             return null;
         }
 
-        buffer.flip();
-        byte[] data = new byte[buffer.remaining()];
-        buffer.get(data);
+        if(bytesRead < Integer.BYTES) {
+            getLogger().warning("[!] Packet length byte was not sent properly from server.");
+            return null;
+        }
+
+        lengthBuffer.flip();
+        int length = lengthBuffer.getInt();
+
+        ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+        bytesRead = ((SocketChannel) this.getChannel()).read(dataBuffer);
+
+        if (bytesRead == -1) {
+            getLogger().info("[!] Packet data byte was not sent properly from server.");
+            return null;
+        }
+
+        dataBuffer.flip();
+        byte[] data = new byte[dataBuffer.remaining()];
+        dataBuffer.get(data);
         Packet packet = Utils.deserializePacket(data);
         getLogger().info(String.format("Received packet from server: %s", packet));
 

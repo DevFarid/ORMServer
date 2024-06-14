@@ -23,13 +23,13 @@ import java.util.logging.Logger;
  * It will translate the database entities into java class objects.
  * Created by SixEyes on 2024-06-01.
  */
-public class AppRepository {
-    private final Logger logger = Logger.getLogger(AppRepository.class.getName());
+public class Repository {
+    private final Logger logger = Logger.getLogger(Repository.class.getName());
     private final ConnectionSource connectionSource;
     private final Map<String, Dao<Object, Integer>> entities = new HashMap<>();
     private boolean canInteractWithData = false;
 
-    public AppRepository(ConnectionSource connectionSource) {
+    public Repository(ConnectionSource connectionSource) {
         this.connectionSource = connectionSource;
         try {
             this.initializeEntities();

@@ -3,6 +3,8 @@ package hive.packets.child;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 
+import java.nio.ByteBuffer;
+
 /**
  * A packet that acts as a response to an act.
  * Created by SixEyes on 06/11/24.
@@ -15,8 +17,10 @@ public class Response extends Packet {
 
     @Override
     public byte[] serialize() {
-        return String.format("%s|", this.getType())
-                .getBytes();
+        byte[] data = String.format("%s|", this.getType()).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
+        buffer.putInt(data.length).put(data);
+        return buffer.array();
     }
 
     @Override

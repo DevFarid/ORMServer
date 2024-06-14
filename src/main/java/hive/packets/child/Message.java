@@ -3,6 +3,8 @@ package hive.packets.child;
 import hive.packets.Packet;
 import hive.packets.PacketType;
 
+import java.nio.ByteBuffer;
+
 /**
  * Represents a packet for sending messages between server & client.
  * Created by SixEyes on 06/03/2024.
@@ -21,9 +23,12 @@ public class Message extends Packet {
 
     @Override
     public byte[] serialize() {
-        return String.format("%s|%s", this.getType(), this.message)
-                .getBytes();
+        byte[] data = String.format("%s|%s", this.getType(), this.message).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
+        buffer.putInt(data.length).put(data);
+        return buffer.array();
     }
+
 
     @Override
     public String toString() {
