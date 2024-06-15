@@ -363,7 +363,7 @@ public class ServerTests {
 
         Path filePath = Paths.get("").toAbsolutePath().resolve("src/test/resources/test.txt");
         byte[] fileBytes = Files.readAllBytes(filePath);
-        hive.packets.child.File filePacket = new hive.packets.child.File(fileBytes);
+        hive.packets.child.File filePacket = new hive.packets.child.File("test.txt", fileBytes);
         clientRef.get().sendPacket(filePacket);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 

@@ -133,7 +133,13 @@ public class Server extends Console implements AutoCloseable {
                                     case FILE -> {
                                         hive.packets.child.File file = (hive.packets.child.File) receivedPacket;
                                         getLogger().info(String.format("[%s](FilePacket): %s", clientChannel.getRemoteAddress(), file));
-                                        // TODO: write the bytes to an actual file.
+                                        file.writeToFile();
+                                    }
+                                    case DISCONNECT -> {
+                                        getLogger().info(String.format("[-]: %s", clientChannel.getRemoteAddress()));
+                                        this.connectedClients.remove(clientChannel);
+                                        key.cancel();
+                                        clientChannel.close();
                                     }
                                 }
                                 notifyListeners(receivedPacket, getLogger());
@@ -173,44 +179,7 @@ public class Server extends Console implements AutoCloseable {
      * @throws IOException if an I/O error occurs.
      */
     public Packet read(SelectionKey key) throws IOException {
-        SocketChannel clientChannel = (SocketChannel) key.channel();
-        if(clientChannel == null) { return null; }
-
-        ByteBuffer lengthBuffer = ByteBuffer.allocate(Integer.BYTES);
-        int bytesRead = clientChannel.read(lengthBuffer);
-
-        if(bytesRead == -1) {
-            getLogger().info(String.format("[-]: %s", clientChannel.getRemoteAddress()));
-            this.connectedClients.remove(clientChannel);
-            key.cancel();
-            clientChannel.close();
-            return null;
-        }
-
-        if(bytesRead < Integer.BYTES) {
-            getLogger().warning(String.format("[!] Packet length byte data was not sent properly from %s", clientChannel.getRemoteAddress()));
-            return null;
-        }
-
-        lengthBuffer.flip();
-        int length = lengthBuffer.getInt();
-
-        ByteBuffer dataBuffer = ByteBuffer.allocate(length);
-        bytesRead = clientChannel.read(dataBuffer);
-
-        if (bytesRead == -1) {
-            getLogger().info(String.format("[!] Packet data byte was not sent properly from %s.", clientChannel.getRemoteAddress()));
-            return null;
-        }
-
-        while(bytesRead < length) {
-            bytesRead += clientChannel.read(dataBuffer);
-        }
-
-        dataBuffer.flip();
-        byte[] data = new byte[dataBuffer.remaining()];
-        dataBuffer.get(data);
-        return Utils.deserializePacket(data);
+        return Utils.deserializePacket((SocketChannel) key.channel(), getLogger());
     }
 
     /**

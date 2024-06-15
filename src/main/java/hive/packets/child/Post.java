@@ -24,9 +24,9 @@ public class Post extends Packet {
 
     @Override
     public byte[] serialize() {
-        byte[] data = String.format("%s|%s", this.getType(), this.getCommand()).getBytes();
-        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
-        buffer.putInt(data.length).put(data);
+        byte[] packetData = String.format("%s|%s", this.getType(), this.getCommand()).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + packetData.length);
+        buffer.putInt(packetData.length).put(packetData);
         return buffer.array();
     }
 

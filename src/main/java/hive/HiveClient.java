@@ -79,6 +79,7 @@ public class HiveClient extends Console {
                                 case MESSAGE -> getLogger().info(String.format("Message from server: %s", packet));
                                 case RESPONSE -> getLogger().info(String.format("Response from server: %s", packet));
                                 case FILE -> getLogger().info(String.format("File from server: %s", packet));
+                                case DISCONNECT -> stop();
                             }
                         }
                     }
@@ -96,38 +97,7 @@ public class HiveClient extends Console {
     }
 
     protected Packet read() throws IOException {
-
-        ByteBuffer lengthBuffer = ByteBuffer.allocate(Integer.BYTES);
-        int bytesRead = ((SocketChannel) this.getChannel()).read(lengthBuffer);
-        if (bytesRead == -1) {
-            getLogger().info("[!] Server has closed the connection.");
-            this.getChannel().close();
-            return null;
-        }
-
-        if(bytesRead < Integer.BYTES) {
-            getLogger().warning("[!] Packet length byte was not sent properly from server.");
-            return null;
-        }
-
-        lengthBuffer.flip();
-        int length = lengthBuffer.getInt();
-
-        ByteBuffer dataBuffer = ByteBuffer.allocate(length);
-        bytesRead = ((SocketChannel) this.getChannel()).read(dataBuffer);
-
-        if (bytesRead == -1) {
-            getLogger().info("[!] Packet data byte was not sent properly from server.");
-            return null;
-        }
-
-        dataBuffer.flip();
-        byte[] data = new byte[dataBuffer.remaining()];
-        dataBuffer.get(data);
-        Packet packet = Utils.deserializePacket(data);
-        getLogger().info(String.format("Received packet from server: %s", packet));
-
-        return packet;
+        return Utils.deserializePacket((SocketChannel) getChannel(), getLogger());
     }
 
     // method to send message to server

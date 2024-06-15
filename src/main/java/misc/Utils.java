@@ -5,21 +5,58 @@ import hive.packets.child.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class Utils {
 
     /**
-     * Deserializes a byte array into an object of {@code Packet} class.
-     * @param data the byte array to deserialize.
-     * @return the packet object deserialized from the byte array.
+     * Serializes a packet from a {@code SocketChannel} channel whose selection key is readable from {@code Selector} selector.
+     * @param channel the channel to serialize the packet from.
+     * @param logger the logger to log any errors to.
+     * @return the serialized packet.
      */
-    public static Packet deserializePacket(byte[] data) {
-        String[] parts = new String(data).split("\\|");
+    public static Packet deserializePacket(SocketChannel channel, Logger logger) throws IOException {
+        if(channel == null) { return null; }
+
+        ByteBuffer pcLbuffer = ByteBuffer.allocate(Integer.BYTES);
+        int bytesRead = channel.read(pcLbuffer);
+
+        if(bytesRead == -1) {
+            return new Disconnect();
+        }
+
+        if(bytesRead < Integer.BYTES) {
+            logger.warning("[!] Packet header was not sent properly from channel.");
+            return null;
+        }
+
+        pcLbuffer.flip();
+        int packetClassSize = pcLbuffer.getInt();
+
+        ByteBuffer packetClassBuffer = ByteBuffer.allocate(packetClassSize);
+        bytesRead = channel.read(packetClassBuffer);
+
+        if(bytesRead == -1) {
+            logger.warning("[!] Packet body was not sent properly from channel.");
+            return null;
+        }
+        
+        while(bytesRead < packetClassSize) {
+            bytesRead += channel.read(packetClassBuffer);
+        }
+        
+        packetClassBuffer.flip();
+        byte[] packetData = new byte[packetClassBuffer.remaining()];
+        packetClassBuffer.get(packetData);
+
+        String[] parts = new String(packetData).split("\\|");
         if(parts.length == 0) return null;
         PacketType type;
 
@@ -36,10 +73,29 @@ public class Utils {
             case POST -> new Post(parts[1]);
             case RESPONSE -> new Response();
             case FILE -> {
-                byte[] fileBytes = new byte[data.length - parts[0].length() - 1];
-                System.arraycopy(data, parts[0].length() + 1, fileBytes, 0, fileBytes.length);
-                yield new hive.packets.child.File(fileBytes);
+                ByteBuffer fileLength = ByteBuffer.allocate(Integer.BYTES);
+                bytesRead = channel.read(fileLength);
+                if(bytesRead == -1) {
+                    logger.warning("[!] File length was not sent properly from channel.");
+                    yield null;
+                }
+
+                fileLength.flip();
+                int fileLengthInt = fileLength.getInt();
+                ByteBuffer fileBuffer = ByteBuffer.allocate(fileLengthInt);
+                bytesRead = channel.read(fileBuffer);
+
+                while(bytesRead < fileLengthInt) {
+                    bytesRead += channel.read(fileBuffer);
+                }
+
+                fileBuffer.flip();
+                byte[] fileBytes = new byte[fileBuffer.remaining()];
+                fileBuffer.get(fileBytes);
+
+                yield new hive.packets.child.File(parts[1], fileBytes);
             }
+            case DISCONNECT -> new Disconnect();
         };
     }
 
@@ -149,7 +205,7 @@ public class Utils {
     public static String readFileRaw(String file) {
         File f = new File(file);
         try {
-            String s = java.nio.file.Files.readString(f.toPath());
+            String s = Files.readString(f.toPath());
             if(s.isEmpty())
                 throw new IllegalArgumentException("File is empty");
             return s;

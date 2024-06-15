@@ -18,9 +18,9 @@ public class SQLacket extends Packet {
 
     @Override
     public byte[] serialize() {
-        byte[] data = String.format("%s|", this.getType()).getBytes();
-        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + data.length);
-        buffer.putInt(data.length).put(data);
+        byte[] packetData = String.format("%s|", this.getType()).getBytes();
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + packetData.length);
+        buffer.putInt(packetData.length).put(packetData);
         return buffer.array();
     }
 
