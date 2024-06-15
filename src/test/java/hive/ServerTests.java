@@ -361,15 +361,83 @@ public class ServerTests {
         });
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
-        Path filePath = Paths.get("").toAbsolutePath().resolve("src/test/resources/test.txt");
+        Path filePath = Paths.get("").toAbsolutePath().resolve("src/test/resources/test-client-to-server.txt");
         byte[] fileBytes = Files.readAllBytes(filePath);
-        hive.packets.child.File filePacket = new hive.packets.child.File("test.txt", fileBytes);
+        hive.packets.child.File filePacket = new hive.packets.child.File("test-CTS.txt", fileBytes);
         clientRef.get().sendPacket(filePacket);
         latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
 
         Assertions.assertTrue(packetReceived.get(), "Server did not receive the expected FilePacket from the client.");
 
         clientRef.get().stop();
+        server.close();
+        executor.close();
+    }
+
+    // Test clients receiving a file from server
+    @Test
+    @Order(10)
+    @DisplayName("test-10: server sends a file to multiple clients.")
+    public void testServerSendFileToMultipleClients() throws Exception {
+        int port = generateRandomPort();
+        final Server server = new Server(Environment.DEV, port);
+        final AtomicReference<HiveClient> clientRef1 = new AtomicReference<>();
+        final AtomicReference<HiveClient> clientRef2 = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(4);
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
+
+        executor.submit(server::start);
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        executor.submit(() -> {
+            try {
+                clientRef1.set(new HiveClient(port));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            clientRef1.get().start();
+        });
+
+        executor.submit(() -> {
+            try {
+                clientRef2.set(new HiveClient(port));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            clientRef2.get().start();
+        });
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        final AtomicBoolean fileReceivedClient1 = new AtomicBoolean(false);
+        final AtomicBoolean fileReceivedClient2 = new AtomicBoolean(false);
+
+        clientRef1.get().addNetworkEventListener(event -> {
+            hive.packets.child.File file = (hive.packets.child.File) event.getPacket();
+            if ("test-STC.txt".equals(file.getFileName())) {
+                fileReceivedClient1.set(true);
+            }
+        });
+
+        clientRef2.get().addNetworkEventListener(event -> {
+            hive.packets.child.File file = (hive.packets.child.File) event.getPacket();
+            if ("test-STC.txt".equals(file.getFileName())) {
+                fileReceivedClient2.set(true);
+            }
+        });
+
+        Path filePath = Paths.get("").toAbsolutePath().resolve("src/test/resources/test-server-to-clients.txt");
+        byte[] fileBytes = Files.readAllBytes(filePath);
+        hive.packets.child.File filePacket = new hive.packets.child.File("test-STC.txt", fileBytes);
+
+        server.broadcastPacket(filePacket);
+
+        latch.await(DELAY_MS, TimeUnit.MILLISECONDS);
+
+        Assertions.assertTrue(fileReceivedClient1.get(), "Client 1 did not receive the expected file.");
+        Assertions.assertTrue(fileReceivedClient2.get(), "Client 2 did not receive the expected file.");
+
+        clientRef1.get().stop();
+        clientRef2.get().stop();
         server.close();
         executor.close();
     }

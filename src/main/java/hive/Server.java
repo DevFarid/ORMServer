@@ -226,6 +226,10 @@ public class Server extends Console implements AutoCloseable {
         });
     }
 
+    public void broadcastPacket(Packet packet) {
+        this.sendToAll(packet);
+        getLogger().info(String.format("Broadcasting: %s to %s", packet, this.connectedClients.keySet().size()));
+    }
 
     /**
      * Broadcast a message to all connected clients.
